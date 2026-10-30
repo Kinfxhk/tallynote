@@ -31,6 +31,7 @@ today + 2 weeks                →  13 November 2026
 - **Variables and references** — `total cost = $750`, `prev`, `line 3`. Change a value and every answer below updates.
 - **Aggregates** — `sum`, `average`, `count`, `min`, `max` per section.
 - **Tags and subtotals** — tag any line with `#food`, then `total of #food`.
+- **Grand total** — `grand total` / `合共` / `總共` adds every answer above the line, grouped by unit (`6.36 kg, 2 m` rather than a fake single number).
 - **Units** — length, mass, area, volume, speed, time, data, angle, temperature; mixed units convert automatically (`5 kg + 3 lb`).
 - **Currency** — ISO codes and symbols, daily ECB rates via frankfurter.app, cached for offline use.
 - **Dates and time** — calendar math, durations, timezone conversion.

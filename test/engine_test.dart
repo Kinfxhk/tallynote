@@ -64,6 +64,28 @@ void main() {
     expect(one('March 12 + 3 weeks 2 days'), '4 April 2027');
   });
 
+  test('grand total sums every answer above, across sections', () {
+    final r = engine.evaluate([
+      '2000 + 3000',
+      '100/2',
+      '4300*2',
+      '6+3x30+30',
+      '合共',
+    ]);
+    expect(r[4].display, '13,776');
+
+    final s2 = engine.evaluate(['# A', '100', '# B', '200', 'grand total']);
+    expect(s2[4].display, '300');
+
+    final s3 = engine.evaluate([r'$10', r'$20', '總共']);
+    expect(s3[2].display, r'$30');
+  });
+
+  test('grand total groups by unit instead of faking one number', () {
+    final r = engine.evaluate(['5 kg', '3 lb', '2 m', '總計']);
+    expect(r[3].display, '6.36077711 kg, 2 m');
+  });
+
   test('tagged subtotal', () {
     final r = engine.evaluate([
       '午餐 120 #food',

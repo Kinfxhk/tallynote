@@ -24,7 +24,8 @@
 | `#tag`（行尾） | 標籤 | `午餐 120 #food` |
 | `name = expr` | 變數宣告 | `rent = 2500` |
 | `total of #tag` / `sum of #tag` | 標籤小計 | `total of #food` |
-| 全行只有 `sum｜total｜average｜avg｜count｜min｜max` | 區段聚合 | `sum` |
+| 全行只有 `sum｜total｜average｜avg｜count｜min｜max` | 區段聚合（本節） | `sum` |
+| 全行只有 `grand total｜合共｜總共｜總計｜總和｜加埋｜全部` | 全表總計（上面所有答案，按單位分組） | `合共` |
 | `A is to B as C is to what` | 比例（rule of three） | `9 is to 16 as 27 is to what` |
 | `if … then … else` | 條件 | `if 5 > 3 then 10 else 20` |
 | `X% off Y` | 折扣 | `25% off 159.99` |

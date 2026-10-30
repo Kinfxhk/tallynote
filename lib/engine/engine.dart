@@ -31,6 +31,12 @@ class LineResult {
 /// Evaluates a whole sheet top to bottom, carrying variables and line
 /// references forward. Errors stay on their own line.
 class SheetEngine {
+  /// Whole-sheet totals. "total" alone stays the section total.
+  static const _grandWords = {
+    'grand total', 'grandtotal', 'grand-total', 'total all', 'sum all',
+    '全部', '合共', '總共', '總計', '總和', '加埋', '全部加埋', '全計',
+  };
+
   final UnitRegistry units;
   final DateParser dates;
   Map<String, double> rates;
@@ -214,7 +220,8 @@ class SheetEngine {
     return results;
   }
 
-  bool _isComment(String s) => s.startsWith('#') && !s.startsWith('# ');
+  // a line starting with '#' is a comment or heading; tags only count at the end
+  bool _isComment(String s) => s.startsWith('#');
 
   String? _extractTag(String s) {
     final m = RegExp(r'\s#([\w\u4e00-\u9fff]+)\s*$').firstMatch(s);
@@ -258,6 +265,11 @@ class SheetEngine {
       final slice = values.sublist(sectionStart, current);
       return _aggregate(agg, slice.whereType<Value>().toList());
     }
+    // grand total: every answer above this line, grouped by unit
+    if (_grandWords.contains(agg)) {
+      return _grandTotal(values.sublist(0, current).whereType<Value>().toList());
+    }
+
     final tagged = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#([\w\u4e00-\u9fff]+)$')
         .firstMatch(agg);
     if (tagged != null) {
@@ -521,6 +533,57 @@ class SheetEngine {
       '==' => a == b,
       _ => a != b,
     };
+  }
+
+  /// Every answer above the line, grouped by unit. Mixed dimensions come back
+  /// as a list ("6.36 kg, 2 m") instead of a fake single number.
+  Value _grandTotal(List<Value> items) {
+    final nums = items.whereType<NumValue>().toList();
+    final money = items.whereType<MoneyValue>().toList();
+    final out = <Value>[];
+
+    if (money.isNotEmpty) {
+      final base = money.first.currency;
+      var total = 0.0;
+      var ok = true;
+      for (final m in money) {
+        final from = rates[m.currency];
+        final to = rates[base];
+        if (from == null || to == null) {
+          ok = false;
+          break;
+        }
+        total += m.value / from * to;
+      }
+      if (ok) out.add(MoneyValue(total, base));
+    }
+
+    final groups = <String, List<NumValue>>{};
+    for (final n in nums) {
+      final key = n.unit == null
+          ? 'plain'
+          : (n.unit!.dims.entries.toList()
+                ..sort((a, b) => a.key.compareTo(b.key)))
+              .map((e) => '${e.key}:${e.value}')
+              .join(',');
+      groups.putIfAbsent(key, () => []).add(n);
+    }
+    for (final list in groups.values) {
+      final unit = list.first.unit;
+      var total = 0.0;
+      for (final n in list) {
+        if (unit == null) {
+          total += n.value;
+        } else {
+          final c = units.convert(n.value, n.unit!, unit);
+          if (c != null) total += c;
+        }
+      }
+      out.add(NumValue(total, unit));
+    }
+
+    if (out.isEmpty) return const ErrorValue('nothing to total');
+    return out.length == 1 ? out.first : ListValue(out);
   }
 
   Value _aggregate(String op, List<Value> items) {
