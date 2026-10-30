@@ -163,6 +163,7 @@ class _AppState extends State<TallynoteApp> {
                               setState(() => _answersVisible = !_answersVisible),
                           onToggleTheme: () => setState(() => _dark = !_dark),
                           onRefreshRates: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final ok = await Rates.refresh();
                             if (!mounted) return;
                             setState(() {
@@ -170,7 +171,7 @@ class _AppState extends State<TallynoteApp> {
                               _recalc();
                             });
                             if (!ok) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                     content:
                                         Text('Offline — kept the last rates')),
