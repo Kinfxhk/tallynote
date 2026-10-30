@@ -284,6 +284,31 @@ class _AppState extends State<TallynoteApp> {
     return MaterialApp(
       title: 'Tallynote',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final s = _uiScale;
+        if (child == null) return const SizedBox.shrink();
+        if ((s - 1).abs() < 0.01) return child;
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            size: mq.size / s,
+            padding: mq.padding / s,
+            viewPadding: mq.viewPadding / s,
+            viewInsets: mq.viewInsets / s,
+          ),
+          child: ClipRect(
+            child: Transform.scale(
+              scale: s,
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: mq.size.width / s,
+                height: mq.size.height / s,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
       navigatorKey: _navKey,
       theme: theme,
       home: CallbackShortcuts(
@@ -446,7 +471,7 @@ class _AppState extends State<TallynoteApp> {
                                     showSteps: _steps,
                                     explain: _engine.explain,
                                     answerWidth: _answerW,
-                                    scale: _uiScale,
+                                    scale: 1,
                                     wheelBlocked: _zoomModifier,
                                     showLineNumbers: _lineNumbers,
                                     onInsertReference: _insertReference,

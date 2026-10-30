@@ -259,7 +259,16 @@ void main() {
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    final before = tester.widget<TextField>(editor).style!.fontSize!;
+    /// The zoom wrapper is a uniform scale away from 1.0.
+    double? zoomTransform() {
+      for (final w in tester.widgetList<Transform>(find.byType(Transform))) {
+        final m = w.transform.storage;
+        if ((m[0] - m[5]).abs() < 1e-6 && (m[0] - 1).abs() > 0.01) {
+          return m[0];
+        }
+      }
+      return null;
+    }
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
@@ -270,8 +279,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    final after = tester.widget<TextField>(editor).style!.fontSize!;
-    expect(after, greaterThan(before));
+    // the whole tree is scaled, not just the text
+    final zoom = zoomTransform();
+    expect(zoom, isNotNull, reason: 'a uniform scale wrapper appears');
+    expect(zoom!, greaterThan(1.05));
+    expect(zoom, lessThanOrEqualTo(2.6));
+    expect(tester.widget<TextField>(editor).style!.fontSize, 15.0);
 
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
