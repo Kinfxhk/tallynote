@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/main.dart';
 import 'package:tallynote/ui/editor_view.dart';
-import 'package:tallynote/ui/feedback.dart';
 import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
