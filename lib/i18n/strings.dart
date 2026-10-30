@@ -1,0 +1,265 @@
+import 'package:flutter/widgets.dart';
+
+/// UI strings, kept as plain maps: no codegen, no runtime lookup cost beyond a
+/// map read, and adding a language is one more entry.
+///
+/// Placeholders are `{name}` and filled by [T.format].
+class T {
+  static const supported = <String, String>{
+    'en': 'English',
+    'zh_Hant': '繁體中文',
+    'zh_Hans': '简体中文',
+  };
+
+  static const _en = <String, String>{
+    'untitled': 'Untitled',
+    'search': 'Search sheets',
+    'unfiled': 'Unfiled',
+    'newSheet': 'New sheet',
+    'newFolder': 'New folder',
+    'noMatches': 'No matches',
+    'rename': 'Rename…',
+    'pin': 'Pin to top',
+    'unpin': 'Unpin',
+    'moveTo': 'Move to',
+    'deleteSheet': 'Delete sheet',
+    'deleteFolder': 'Delete folder (sheets stay)',
+    'renameFolder': 'Rename folder',
+    'renameSheet': 'Rename sheet',
+    'folder': 'Folder',
+    'name': 'Name',
+    'sheet': 'Sheet',
+    'cancel': 'Cancel',
+    'ok': 'OK',
+    'done': 'Done',
+    'linesAnswers': '{lines} lines · {answers} answers',
+    'editing': 'editing…',
+    'justSaved': 'Saved ✓',
+    'savedAt': 'saved {time}',
+    'savedOn': 'saved {date} {time}',
+    'rates': 'rates {date}',
+    'ratesBuiltIn': 'built-in',
+    'appearance': 'Appearance',
+    'editor': 'Editor',
+    'data': 'Data',
+    'dark': 'Dark mode',
+    'darkHint': 'Paper is light, ink is dark',
+    'answers': 'Answers',
+    'answersHint': 'Show the result column',
+    'signColours': 'Sign colours',
+    'signColoursHint': 'Negative red, positive green',
+    'positive': 'Positive',
+    'negative': 'Negative',
+    'textSize': 'Text size',
+    'textSizeHint': 'Scales the whole interface',
+    'lineNumbers': 'Line numbers',
+    'lineNumbersHint': 'Faint gutter, code-editor style',
+    'tabBar': 'Tab bar',
+    'tabBarHint': 'Open sheets as tabs under the header',
+    'stepChevrons': 'Step chevrons',
+    'stepChevronsHint': 'Show steps beside complex answers',
+    'shortcuts':
+        'Shortcuts — ⌘/Ctrl: S save · ⇧S strike · ⇧D save a copy · '
+        'B bold · I italic · U underline · F search · W close tab · '
+        'N new sheet · \\ sidebar · ⇧A answers · + − 0 zoom · '
+        'double-click the divider to fit',
+    'autoRates': 'Auto-refresh rates',
+    'autoRatesHint': 'Once a day when a network is available',
+    'exchangeRates': 'Exchange rates',
+    'ratesUpdated': 'Last updated {date}',
+    'ratesTable': 'Built-in table (offline)',
+    'refresh': 'Refresh',
+    'offline': 'Offline — kept the last rates',
+    'privacy':
+        'Everything is computed on this device. Rates are the only '
+        'thing that ever uses the network, and only when they are stale.',
+    'settings': 'Settings',
+    'sheets': 'Sheets',
+    'toggleAnswers': 'Answers',
+    'theme': 'Theme',
+    'sidebar': 'Collapse sidebar',
+    'zoomIn': 'Zoom in',
+    'zoomOut': 'Zoom out',
+    'zoomReset': 'Reset to 100%',
+    'showSteps': 'Show steps',
+    'editorHint': 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
+    'language': 'Language',
+    'languageHint': 'Interface language',
+  };
+
+  static const _zhHant = <String, String>{
+    'untitled': '未命名',
+    'search': '搜尋記事',
+    'unfiled': '未分類',
+    'newSheet': '新記事',
+    'newFolder': '新資料夾',
+    'noMatches': '冇符合結果',
+    'rename': '改名…',
+    'pin': '置頂',
+    'unpin': '取消置頂',
+    'moveTo': '移到',
+    'deleteSheet': '刪除記事',
+    'deleteFolder': '刪除資料夾（記事保留）',
+    'renameFolder': '資料夾改名',
+    'renameSheet': '記事改名',
+    'folder': '資料夾',
+    'name': '名稱',
+    'sheet': '記事',
+    'cancel': '取消',
+    'ok': '確定',
+    'done': '完成',
+    'linesAnswers': '{lines} 行 · {answers} 個答案',
+    'editing': '編輯中…',
+    'justSaved': '已儲存 ✓',
+    'savedAt': '已儲存 {time}',
+    'savedOn': '已儲存 {date} {time}',
+    'rates': '匯率 {date}',
+    'ratesBuiltIn': '內建',
+    'appearance': '外觀',
+    'editor': '編輯',
+    'data': '資料',
+    'dark': '深色模式',
+    'darkHint': '紙白字黑，或反過來',
+    'answers': '顯示答案',
+    'answersHint': '右邊顯示計算結果',
+    'signColours': '正負色',
+    'signColoursHint': '負數紅、正數綠',
+    'positive': '正數',
+    'negative': '負數',
+    'textSize': '文字大小',
+    'textSizeHint': '整體介面縮放',
+    'lineNumbers': '行號',
+    'lineNumbersHint': '淡色行號，似 code editor',
+    'tabBar': '分頁列',
+    'tabBarHint': '標題下用分頁顯示已開記事',
+    'stepChevrons': '步驟箭頭',
+    'stepChevronsHint': '複雜算式旁顯示步驟',
+    'shortcuts':
+        '快捷鍵 — ⌘/Ctrl：S 儲存 · ⇧S 刪除線 · ⇧D 另存副本 · '
+        'B 粗體 · I 斜體 · U 底線 · F 搜尋 · W 關分頁 · N 新記事 · '
+        '\\ 側欄 · ⇧A 答案 · + − 0 縮放 · 雙擊分隔線自動對齊',
+    'autoRates': '自動更新匯率',
+    'autoRatesHint': '有網絡時每日一次',
+    'exchangeRates': '匯率',
+    'ratesUpdated': '最後更新 {date}',
+    'ratesTable': '內建匯率表（離線）',
+    'refresh': '更新',
+    'offline': '離線 — 沿用上次匯率',
+    'privacy': '所有計算都喺呢部機完成。只有匯率會用網絡，而且只喺過期時。',
+    'settings': '設定',
+    'sheets': '記事',
+    'toggleAnswers': '答案',
+    'theme': '主題',
+    'sidebar': '收合側欄',
+    'zoomIn': '放大',
+    'zoomOut': '縮小',
+    'zoomReset': '回復 100%',
+    'showSteps': '顯示步驟',
+    'editorHint': '輸入算式…   例如  rent = 2500  ·  total of #food',
+    'language': '語言',
+    'languageHint': '介面語言',
+  };
+
+  static const _zhHans = <String, String>{
+    'untitled': '未命名',
+    'search': '搜索笔记',
+    'unfiled': '未分类',
+    'newSheet': '新笔记',
+    'newFolder': '新文件夹',
+    'noMatches': '没有匹配结果',
+    'rename': '重命名…',
+    'pin': '置顶',
+    'unpin': '取消置顶',
+    'moveTo': '移动到',
+    'deleteSheet': '删除笔记',
+    'deleteFolder': '删除文件夹（笔记保留）',
+    'renameFolder': '文件夹重命名',
+    'renameSheet': '笔记重命名',
+    'folder': '文件夹',
+    'name': '名称',
+    'sheet': '笔记',
+    'cancel': '取消',
+    'ok': '确定',
+    'done': '完成',
+    'linesAnswers': '{lines} 行 · {answers} 个答案',
+    'editing': '编辑中…',
+    'justSaved': '已保存 ✓',
+    'savedAt': '已保存 {time}',
+    'savedOn': '已保存 {date} {time}',
+    'rates': '汇率 {date}',
+    'ratesBuiltIn': '内置',
+    'appearance': '外观',
+    'editor': '编辑',
+    'data': '数据',
+    'dark': '深色模式',
+    'darkHint': '纸白字黑，或反过来',
+    'answers': '显示答案',
+    'answersHint': '右侧显示计算结果',
+    'signColours': '正负色',
+    'signColoursHint': '负数红、正数绿',
+    'positive': '正数',
+    'negative': '负数',
+    'textSize': '文字大小',
+    'textSizeHint': '整体界面缩放',
+    'lineNumbers': '行号',
+    'lineNumbersHint': '淡色行号，类似代码编辑器',
+    'tabBar': '标签栏',
+    'tabBarHint': '在标题下用标签显示已打开笔记',
+    'stepChevrons': '步骤箭头',
+    'stepChevronsHint': '复杂算式旁显示步骤',
+    'shortcuts':
+        '快捷键 — ⌘/Ctrl：S 保存 · ⇧S 删除线 · ⇧D 另存副本 · '
+        'B 粗体 · I 斜体 · U 下划线 · F 搜索 · W 关闭标签 · N 新笔记 · '
+        '\\ 侧栏 · ⇧A 答案 · + − 0 缩放 · 双击分隔线自动对齐',
+    'autoRates': '自动更新汇率',
+    'autoRatesHint': '有网络时每天一次',
+    'exchangeRates': '汇率',
+    'ratesUpdated': '最后更新 {date}',
+    'ratesTable': '内置汇率表（离线）',
+    'refresh': '更新',
+    'offline': '离线 — 沿用上次汇率',
+    'privacy': '所有计算都在本机完成。只有汇率会用到网络，而且只在过期时。',
+    'settings': '设置',
+    'sheets': '笔记',
+    'toggleAnswers': '答案',
+    'theme': '主题',
+    'sidebar': '收起侧栏',
+    'zoomIn': '放大',
+    'zoomOut': '缩小',
+    'zoomReset': '恢复 100%',
+    'showSteps': '显示步骤',
+    'editorHint': '输入算式…   例如  rent = 2500  ·  total of #food',
+    'language': '语言',
+    'languageHint': '界面语言',
+  };
+
+  static const _all = <String, Map<String, String>>{
+    'en': _en,
+    'zh_Hant': _zhHant,
+    'zh_Hans': _zhHans,
+  };
+
+  static String of(String locale, String key) =>
+      _all[locale]?[key] ?? _en[key] ?? key;
+
+  static String format(String locale, String key, Map<String, String> args) {
+    var s = of(locale, key);
+    args.forEach((k, v) => s = s.replaceAll('{$k}', v));
+    return s;
+  }
+}
+
+/// Makes the chosen locale available to any widget: `LocaleScope.of(context)`.
+class LocaleScope extends InheritedWidget {
+  final String locale;
+
+  const LocaleScope({super.key, required this.locale, required super.child});
+
+  static String of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LocaleScope>()?.locale ?? 'en';
+
+  static String t(BuildContext context, String key) => T.of(of(context), key);
+
+  @override
+  bool updateShouldNotify(LocaleScope oldWidget) => oldWidget.locale != locale;
+}

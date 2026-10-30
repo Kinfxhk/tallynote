@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/document.dart';
+import '../i18n/strings.dart';
 import 'feedback.dart';
 import 'theme.dart';
 
@@ -67,7 +68,7 @@ class _SidebarState extends State<Sidebar> {
                 ),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Collapse sidebar  ⌘\\',
+                  tooltip: LocaleScope.t(context, 'sidebar'),
                   iconSize: 18,
                   onPressed: widget.onClose,
                   icon: Icon(
@@ -88,7 +89,7 @@ class _SidebarState extends State<Sidebar> {
               cursorColor: Palette.answer(_dark),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: 'Search sheets',
+                hintText: LocaleScope.t(context, 'search'),
                 hintStyle: TextStyle(
                   fontSize: 12.5,
                   color: Palette.faint(_dark),
@@ -115,7 +116,8 @@ class _SidebarState extends State<Sidebar> {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 children: searching
                     ? [
-                        if (matches.isEmpty) _note('No matches'),
+                        if (matches.isEmpty)
+                          _note(LocaleScope.t(context, 'noMatches')),
                         for (final s in matches)
                           _sheetTile(s, showFolder: true),
                       ]
@@ -138,12 +140,12 @@ class _SidebarState extends State<Sidebar> {
           Divider(height: 1, color: Palette.hairline(_dark)),
           _action(
             icon: Icons.add,
-            label: 'New sheet',
+            label: LocaleScope.t(context, 'newSheet'),
             onTap: () => _store.create(),
           ),
           _action(
             icon: Icons.create_new_folder_outlined,
-            label: 'New folder',
+            label: LocaleScope.t(context, 'newFolder'),
             onTap: _newFolder,
           ),
           const SizedBox(height: 6),
@@ -223,7 +225,7 @@ class _SidebarState extends State<Sidebar> {
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                'Unfiled',
+                LocaleScope.t(context, 'unfiled'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -260,7 +262,7 @@ class _SidebarState extends State<Sidebar> {
               ),
             Expanded(
               child: Text(
-                s.title.isEmpty ? 'Untitled' : s.title,
+                s.title.isEmpty ? LocaleScope.t(context, 'untitled') : s.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -345,7 +347,7 @@ class _SidebarState extends State<Sidebar> {
   // ---- menus ---------------------------------------------------------------
 
   Future<void> _newFolder() async {
-    final name = await _prompt('New folder', 'Name');
+    final name = await _prompt(LocaleScope.t(context, 'newFolder'), 'Name');
     if (name != null) {
       _store.createFolder(name);
       setState(() {});
@@ -353,6 +355,7 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Future<void> _folderMenu(Folder f) async {
+    final locale = LocaleScope.of(context);
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Palette.bg(_dark),
@@ -360,9 +363,12 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _menuRow('Rename folder', () => Navigator.pop(ctx, 'rename')),
             _menuRow(
-              'Delete folder (sheets stay)',
+              LocaleScope.t(context, 'renameFolder'),
+              () => Navigator.pop(ctx, 'rename'),
+            ),
+            _menuRow(
+              LocaleScope.t(context, 'deleteFolder'),
               () => Navigator.pop(ctx, 'delete'),
             ),
           ],
@@ -370,7 +376,11 @@ class _SidebarState extends State<Sidebar> {
       ),
     );
     if (action == 'rename') {
-      final name = await _prompt('Rename folder', 'Name', initial: f.name);
+      final name = await _prompt(
+        T.of(locale, 'renameFolder'),
+        T.of(locale, 'name'),
+        initial: f.name,
+      );
       if (name != null) _store.renameFolder(f.id, name);
     } else if (action == 'delete') {
       _store.deleteFolder(f.id);
@@ -379,6 +389,7 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Future<void> _sheetMenu(Sheet s) async {
+    final locale = LocaleScope.of(context);
     final action = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Palette.bg(_dark),
@@ -399,17 +410,28 @@ class _SidebarState extends State<Sidebar> {
                 ),
               ),
             ),
-            _menuRow('Rename…', () => Navigator.pop(ctx, 'rename')),
             _menuRow(
-              s.pinned ? 'Unpin' : 'Pin to top',
+              LocaleScope.t(context, 'rename'),
+              () => Navigator.pop(ctx, 'rename'),
+            ),
+            _menuRow(
+              s.pinned
+                  ? LocaleScope.t(context, 'unpin')
+                  : LocaleScope.t(context, 'pin'),
               () => Navigator.pop(ctx, 'pin'),
             ),
             const Divider(height: 12),
-            _menuRow('Unfiled', () => Navigator.pop(ctx, 'none')),
+            _menuRow(
+              LocaleScope.t(context, 'unfiled'),
+              () => Navigator.pop(ctx, 'none'),
+            ),
             for (final f in _store.folders)
               _menuRow(f.name, () => Navigator.pop(ctx, f.id)),
             const Divider(height: 12),
-            _menuRow('Delete sheet', () => Navigator.pop(ctx, 'delete')),
+            _menuRow(
+              LocaleScope.t(context, 'deleteSheet'),
+              () => Navigator.pop(ctx, 'delete'),
+            ),
           ],
         ),
       ),
@@ -417,9 +439,9 @@ class _SidebarState extends State<Sidebar> {
     if (action == null) return;
     if (action == 'rename') {
       final name = await _prompt(
-        'Rename sheet',
-        'Name',
-        initial: s.title.isEmpty ? 'Untitled' : s.title,
+        T.of(locale, 'renameSheet'),
+        T.of(locale, 'name'),
+        initial: s.title.isEmpty ? T.of(locale, 'untitled') : s.title,
       );
       if (name != null) _store.rename(s.id, name);
     } else if (action == 'pin') {
@@ -463,13 +485,16 @@ class _SidebarState extends State<Sidebar> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              'Cancel',
+              LocaleScope.t(context, 'cancel'),
               style: TextStyle(color: Palette.faint(_dark)),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, c.text),
-            child: Text('OK', style: TextStyle(color: Palette.answer(_dark))),
+            child: Text(
+              LocaleScope.t(context, 'ok'),
+              style: TextStyle(color: Palette.answer(_dark)),
+            ),
           ),
         ],
       ),

@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'i18n/strings.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +48,7 @@ class _AppState extends State<TallynoteApp> {
   bool _steps = true;
   double _answerW = 212;
   double _uiScale = 1.0;
+  String? _locale; // null = follow the system
   bool _lineNumbers = true;
   bool _showTabs = true;
   final List<String> _tabs = [];
@@ -102,6 +107,7 @@ class _AppState extends State<TallynoteApp> {
     _steps = prefs.getBool('tallynote.steps') ?? true;
     _answerW = prefs.getDouble('tallynote.answerWidth') ?? 212;
     _uiScale = prefs.getDouble('tallynote.uiScale') ?? 1.0;
+    _locale = prefs.getString('tallynote.locale');
     _lineNumbers = prefs.getBool('tallynote.lineNumbers') ?? true;
     _showTabs = prefs.getBool('tallynote.showTabs') ?? true;
     _signColours = prefs.getBool('tallynote.signColours') ?? true;
@@ -303,12 +309,37 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.steps', _steps);
     await prefs.setDouble('tallynote.answerWidth', _answerW);
     await prefs.setDouble('tallynote.uiScale', _uiScale);
+    if (_locale != null) await prefs.setString('tallynote.locale', _locale!);
     await prefs.setBool('tallynote.lineNumbers', _lineNumbers);
     await prefs.setBool('tallynote.showTabs', _showTabs);
     await prefs.setBool('tallynote.signColours', _signColours);
     await prefs.setString('tallynote.posColour', _posName);
     await prefs.setString('tallynote.negColour', _negName);
   }
+
+  String get _effectiveLocale {
+    final chosen = _locale;
+    if (chosen != null) return chosen;
+    final sys = WidgetsBinding.instance.platformDispatcher.locale;
+    if (sys.languageCode == 'zh') {
+      return sys.scriptCode == 'Hans' || sys.countryCode == 'CN'
+          ? 'zh_Hans'
+          : 'zh_Hant';
+    }
+    return 'en';
+  }
+
+  Locale get _materialLocale => switch (_effectiveLocale) {
+    'zh_Hant' => const Locale.fromSubtags(
+      languageCode: 'zh',
+      scriptCode: 'Hant',
+    ),
+    'zh_Hans' => const Locale.fromSubtags(
+      languageCode: 'zh',
+      scriptCode: 'Hans',
+    ),
+    _ => const Locale('en'),
+  };
 
   bool get _hasSelection =>
       _controller.selection.isValid && !_controller.selection.isCollapsed;
@@ -346,39 +377,55 @@ class _AppState extends State<TallynoteApp> {
     return MaterialApp(
       title: 'Tallynote',
       debugShowCheckedModeBanner: false,
+      locale: _materialLocale,
+      supportedLocales: const [
+        Locale('en'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       builder: (context, child) {
         if (child == null) return const SizedBox.shrink();
         final s = _uiScale;
-        if ((s - 1).abs() < 0.01) return child;
+        if ((s - 1).abs() < 0.01) {
+          return LocaleScope(locale: _effectiveLocale, child: child);
+        }
         final mq = MediaQuery.of(context);
         final logical = mq.size / s;
         // OverflowBox pins the child to the reduced logical size; the transform
         // then paints it back to exactly one screen, so nothing spills out and
         // no gap is left behind.
-        return ColoredBox(
-          color: Palette.bg(_dark),
-          child: ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.topLeft,
-              minWidth: logical.width,
-              maxWidth: logical.width,
-              minHeight: logical.height,
-              maxHeight: logical.height,
-              child: Transform.scale(
-                key: const ValueKey('ui-zoom'),
-                scale: s,
+        return LocaleScope(
+          locale: _effectiveLocale,
+          child: ColoredBox(
+            color: Palette.bg(_dark),
+            child: ClipRect(
+              child: OverflowBox(
                 alignment: Alignment.topLeft,
-                child: SizedBox(
-                  width: logical.width,
-                  height: logical.height,
-                  child: MediaQuery(
-                    data: mq.copyWith(
-                      size: logical,
-                      padding: mq.padding / s,
-                      viewPadding: mq.viewPadding / s,
-                      viewInsets: mq.viewInsets / s,
+                minWidth: logical.width,
+                maxWidth: logical.width,
+                minHeight: logical.height,
+                maxHeight: logical.height,
+                child: Transform.scale(
+                  key: const ValueKey('ui-zoom'),
+                  scale: s,
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: logical.width,
+                    height: logical.height,
+                    child: MediaQuery(
+                      data: mq.copyWith(
+                        size: logical,
+                        padding: mq.padding / s,
+                        viewPadding: mq.viewPadding / s,
+                        viewInsets: mq.viewInsets / s,
+                      ),
+                      child: child,
                     ),
-                    child: child,
                   ),
                 ),
               ),
@@ -522,6 +569,11 @@ class _AppState extends State<TallynoteApp> {
                               lineNumbers: _lineNumbers,
                               showTabs: _showTabs,
                               uiScale: _uiScale,
+                              locale: _locale ?? _effectiveLocale,
+                              onLocale: (v) {
+                                setState(() => _locale = v);
+                                _saveSettings();
+                              },
                               posName: _posName,
                               negName: _negName,
                               onAnswers: (v) {
@@ -761,14 +813,14 @@ class _Header extends StatelessWidget {
             if (showMenu)
               IconButton(
                 iconSize: 18,
-                tooltip: 'Sheets  ⌘\\',
+                tooltip: '${LocaleScope.t(context, 'sheets')}  ⌘\\',
                 onPressed: onMenu,
                 icon: Icon(Icons.menu, color: Palette.faint(dark)),
               ),
             const Spacer(),
             _IconAction(
               icon: Icons.tune,
-              tooltip: 'Settings',
+              tooltip: LocaleScope.t(context, 'settings'),
               dark: dark,
               onTap: onSettings,
             ),
@@ -821,9 +873,9 @@ class _StatusBar extends StatelessWidget {
   });
 
   /// "editing…" while the debounce is pending, else the last save time.
-  String get _saveLabel {
-    if (dirty) return 'editing…';
-    if (justSaved) return 'Saved ✓';
+  String _saveLabelFor(String locale) {
+    if (dirty) return T.of(locale, 'editing');
+    if (justSaved) return T.of(locale, 'justSaved');
     final at = savedAt;
     if (at == null) return '';
     final hh = at.hour.toString().padLeft(2, '0');
@@ -832,12 +884,19 @@ class _StatusBar extends StatelessWidget {
         at.year == DateTime.now().year &&
         at.month == DateTime.now().month &&
         at.day == DateTime.now().day;
-    return sameDay ? 'saved $hh:$mm' : 'saved ${at.day}/${at.month} $hh:$mm';
+    final time = '$hh:$mm';
+    return sameDay
+        ? T.format(locale, 'savedAt', {'time': time})
+        : T.format(locale, 'savedOn', {
+            'date': '${at.day}/${at.month}',
+            'time': time,
+          });
   }
 
   @override
   Widget build(BuildContext context) {
-    final rateDate = Rates.updatedDate ?? 'built-in';
+    final locale = LocaleScope.of(context);
+    final rateDate = Rates.updatedDate ?? T.of(locale, 'ratesBuiltIn');
     return Container(
       height: 26,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -848,16 +907,19 @@ class _StatusBar extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              '$lines lines · $answers answers',
+              T.format(locale, 'linesAnswers', {
+                'lines': '$lines',
+                'answers': '$answers',
+              }),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
             ),
           ),
           const SizedBox(width: 12),
-          if (_saveLabel.isNotEmpty) ...[
+          if (_saveLabelFor(locale).isNotEmpty) ...[
             Text(
-              _saveLabel,
+              _saveLabelFor(locale),
               style: TextStyle(
                 fontSize: 11,
                 color: justSaved ? Palette.positive(dark) : Palette.faint(dark),
@@ -867,7 +929,7 @@ class _StatusBar extends StatelessWidget {
           ],
           Flexible(
             child: Text(
-              'rates $rateDate',
+              T.format(locale, 'rates', {'date': rateDate}),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
@@ -1038,6 +1100,7 @@ class _ZoomHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = LocaleScope.of(context);
     Widget button(IconData icon, String tip, VoidCallback tap) => Pressable(
       onTap: tap,
       padding: const EdgeInsets.all(7),
@@ -1066,7 +1129,7 @@ class _ZoomHud extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            button(Icons.remove, 'Zoom out  ⌘−', onMinus),
+            button(Icons.remove, '${T.of(locale, 'zoomOut')}  ⌘−', onMinus),
             SizedBox(
               width: 46,
               child: Text(
@@ -1079,9 +1142,13 @@ class _ZoomHud extends StatelessWidget {
                 ),
               ),
             ),
-            button(Icons.add, 'Zoom in  ⌘=', onPlus),
+            button(Icons.add, '${T.of(locale, 'zoomIn')}  ⌘=', onPlus),
             Container(width: 1, height: 16, color: Palette.hairline(dark)),
-            button(Icons.restart_alt, 'Reset to 100%  ⌘0', onReset),
+            button(
+              Icons.restart_alt,
+              '${T.of(locale, 'zoomReset')}  ⌘0',
+              onReset,
+            ),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/rates.dart';
+import '../i18n/strings.dart';
 import 'feedback.dart';
 import 'formatting.dart';
 import 'theme.dart';
@@ -19,6 +20,8 @@ Future<void> showSettingsSheet({
   required bool lineNumbers,
   required bool showTabs,
   required double uiScale,
+  required String locale,
+  required ValueChanged<String> onLocale,
   required ValueChanged<bool> onAnswers,
   required ValueChanged<bool> onTheme,
   required ValueChanged<bool> onAutoRates,
@@ -44,6 +47,8 @@ Future<void> showSettingsSheet({
       lineNumbers: lineNumbers,
       showTabs: showTabs,
       uiScale: uiScale,
+      locale: locale,
+      onLocale: onLocale,
       onAnswers: onAnswers,
       onTheme: onTheme,
       onAutoRates: onAutoRates,
@@ -70,6 +75,8 @@ class _SettingsDialog extends StatefulWidget {
   final bool lineNumbers;
   final bool showTabs;
   final double uiScale;
+  final String locale;
+  final ValueChanged<String> onLocale;
   final ValueChanged<bool> onAnswers;
   final ValueChanged<bool> onTheme;
   final ValueChanged<bool> onAutoRates;
@@ -93,6 +100,8 @@ class _SettingsDialog extends StatefulWidget {
     required this.lineNumbers,
     required this.showTabs,
     required this.uiScale,
+    required this.locale,
+    required this.onLocale,
     required this.onAnswers,
     required this.onTheme,
     required this.onAutoRates,
@@ -121,6 +130,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   late bool lineNumbers = widget.lineNumbers;
   late bool showTabs = widget.showTabs;
   late double scale = widget.uiScale;
+  late String locale = widget.locale;
   String? rateError;
 
   @override
@@ -140,10 +150,10 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                 unselectedLabelColor: Palette.faint(dark),
                 indicatorColor: Palette.answer(dark),
                 labelStyle: const TextStyle(fontSize: 12.5),
-                tabs: const [
-                  Tab(text: 'Appearance'),
-                  Tab(text: 'Editor'),
-                  Tab(text: 'Data'),
+                tabs: [
+                  Tab(text: T.of(locale, 'appearance')),
+                  Tab(text: T.of(locale, 'editor')),
+                  Tab(text: T.of(locale, 'data')),
                 ],
               ),
               Flexible(
@@ -176,36 +186,37 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   Widget _appearance() => ListView(
     padding: const EdgeInsets.symmetric(vertical: 8),
     children: [
+      _languageRow(),
       _row(
-        'Dark mode',
-        'Paper is light, ink is dark',
+        T.of(locale, 'dark'),
+        T.of(locale, 'darkHint'),
         _switch(dark, (v) {
           setState(() => dark = v);
           widget.onTheme(v);
         }),
       ),
       _row(
-        'Answers',
-        'Show the result column',
+        T.of(locale, 'answers'),
+        T.of(locale, 'answersHint'),
         _switch(answers, (v) {
           setState(() => answers = v);
           widget.onAnswers(v);
         }),
       ),
       _row(
-        'Sign colours',
-        'Negative red, positive green',
+        T.of(locale, 'signColours'),
+        T.of(locale, 'signColoursHint'),
         _switch(signColours, (v) {
           setState(() => signColours = v);
           widget.onSignColours(v);
         }),
       ),
       if (signColours) ...[
-        _colourRow('Positive', pos, (name) {
+        _colourRow(T.of(locale, 'positive'), pos, (name) {
           setState(() => pos = name);
           widget.onPosColour(name);
         }),
-        _colourRow('Negative', neg, (name) {
+        _colourRow(T.of(locale, 'negative'), neg, (name) {
           setState(() => neg = name);
           widget.onNegColour(name);
         }),
@@ -216,26 +227,30 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   Widget _editor() => ListView(
     padding: const EdgeInsets.symmetric(vertical: 8),
     children: [
-      _row('Text size', 'Scales the whole interface', _scaleButtons()),
       _row(
-        'Line numbers',
-        'Faint gutter, code-editor style',
+        T.of(locale, 'textSize'),
+        T.of(locale, 'textSizeHint'),
+        _scaleButtons(),
+      ),
+      _row(
+        T.of(locale, 'lineNumbers'),
+        T.of(locale, 'lineNumbersHint'),
         _switch(lineNumbers, (v) {
           setState(() => lineNumbers = v);
           widget.onLineNumbers(v);
         }),
       ),
       _row(
-        'Tab bar',
-        'Open sheets as tabs under the header',
+        T.of(locale, 'tabBar'),
+        T.of(locale, 'tabBarHint'),
         _switch(showTabs, (v) {
           setState(() => showTabs = v);
           widget.onShowTabs(v);
         }),
       ),
       _row(
-        'Step chevrons',
-        'Show steps beside complex answers',
+        T.of(locale, 'stepChevrons'),
+        T.of(locale, 'stepChevronsHint'),
         _switch(steps, (v) {
           setState(() => steps = v);
           widget.onSteps(v);
@@ -244,10 +259,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
         child: Text(
-          'Shortcuts — ⌘/Ctrl: S save · ⇧S strike · ⇧D save a copy · '
-          'B bold · I italic · U underline · F search · W close tab · '
-          r'N new sheet · \ sidebar · ⇧A answers · + − 0 zoom · '
-          'double-click the divider to fit',
+          T.of(locale, 'shortcuts'),
           style: TextStyle(
             fontSize: 11,
             height: 1.5,
@@ -262,29 +274,29 @@ class _SettingsDialogState extends State<_SettingsDialog> {
     padding: const EdgeInsets.symmetric(vertical: 8),
     children: [
       _row(
-        'Auto-refresh rates',
-        'Once a day when a network is available',
+        T.of(locale, 'autoRates'),
+        T.of(locale, 'autoRatesHint'),
         _switch(autoRates, (v) {
           setState(() => autoRates = v);
           widget.onAutoRates(v);
         }),
       ),
       _row(
-        'Exchange rates',
+        T.of(locale, 'exchangeRates'),
         rateError ??
             (Rates.updatedDate == null
-                ? 'Built-in table (offline)'
-                : 'Last updated ${Rates.updatedDate}'),
+                ? T.of(locale, 'ratesTable')
+                : T.format(locale, 'ratesUpdated', {
+                    'date': '${Rates.updatedDate}',
+                  })),
         TextButton(
           onPressed: () async {
             final ok = await widget.onRefreshRates();
             if (!mounted) return;
-            setState(
-              () => rateError = ok ? null : 'Offline — kept the last rates',
-            );
+            setState(() => rateError = ok ? null : T.of(locale, 'offline'));
           },
           child: Text(
-            'Refresh',
+            T.of(locale, 'refresh'),
             style: TextStyle(fontSize: 13, color: Palette.answer(dark)),
           ),
         ),
@@ -292,8 +304,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
         child: Text(
-          'Everything is computed on this device. Rates are the only thing '
-          'that ever uses the network, and only when they are stale.',
+          T.of(locale, 'privacy'),
           style: TextStyle(
             fontSize: 11,
             height: 1.5,
@@ -305,6 +316,43 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   );
 
   // ---- rows ----------------------------------------------------------------
+
+  Widget _languageRow() => _row(
+    T.of(locale, 'language'),
+    T.of(locale, 'languageHint'),
+    Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final entry in T.supported.entries)
+          TextButton(
+            onPressed: () {
+              setState(() => locale = entry.key);
+              widget.onLocale(entry.key);
+            },
+            style: TextButton.styleFrom(
+              minimumSize: const Size(34, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              foregroundColor: locale == entry.key
+                  ? Palette.answer(dark)
+                  : Palette.faint(dark),
+            ),
+            child: Text(
+              switch (entry.key) {
+                'zh_Hant' => '繁',
+                'zh_Hans' => '简',
+                _ => 'EN',
+              },
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: locale == entry.key
+                    ? FontWeight.w700
+                    : FontWeight.w400,
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 
   Widget _row(String label, String hint, Widget trailing) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

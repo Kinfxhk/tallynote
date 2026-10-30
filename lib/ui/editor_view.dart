@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
+import '../i18n/strings.dart';
 import '../engine/values.dart';
 import 'feedback.dart';
 import 'theme.dart';
@@ -156,10 +157,10 @@ class _EditorViewState extends State<EditorView> {
                     readOnly: widget.readOnly,
                     cursorColor: Palette.answer(widget.dark),
                     cursorWidth: 1.6,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isCollapsed: true,
                       border: InputBorder.none,
-                      hintText: 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
+                      hintText: LocaleScope.t(context, 'editorHint'),
                     ),
                     keyboardType: TextInputType.multiline,
                     textCapitalization: TextCapitalization.none,
@@ -463,7 +464,7 @@ class _StepButton extends StatelessWidget {
     // the whole gutter cell is tappable; only the glyph is small
     return Semantics(
       button: true,
-      label: 'Show steps',
+      label: LocaleScope.t(context, 'showSteps'),
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
