@@ -12,6 +12,17 @@ class T {
   };
 
   static const _en = <String, String>{
+    'file': 'File',
+    'fileNew': 'New sheet',
+    'fileOpen': 'Open file…',
+    'fileSaveCopy': 'Save a copy…',
+    'exportMd': 'Export Markdown…',
+    'exportCsv': 'Export CSV…',
+    'exportTxt': 'Export text…',
+    'filePrint': 'Print / PDF…',
+    'imported': 'Imported {n} sheet(s)',
+    'savedAs': 'Saved {name}',
+    'notTallynote': 'Not a Tallynote file',
     'untitled': 'Untitled',
     'search': 'Search sheets',
     'unfiled': 'Unfiled',
@@ -88,6 +99,17 @@ class T {
   };
 
   static const _zhHant = <String, String>{
+    'file': '檔案',
+    'fileNew': '新記事',
+    'fileOpen': '開啟檔案…',
+    'fileSaveCopy': '另存副本…',
+    'exportMd': '匯出 Markdown…',
+    'exportCsv': '匯出 CSV…',
+    'exportTxt': '匯出純文字…',
+    'filePrint': '列印／PDF…',
+    'imported': '已匯入 {n} 個記事',
+    'savedAs': '已儲存 {name}',
+    'notTallynote': '唔係 Tallynote 檔案',
     'untitled': '未命名',
     'search': '搜尋記事',
     'unfiled': '未分類',
@@ -161,6 +183,17 @@ class T {
   };
 
   static const _zhHans = <String, String>{
+    'file': '文件',
+    'fileNew': '新笔记',
+    'fileOpen': '打开文件…',
+    'fileSaveCopy': '另存副本…',
+    'exportMd': '导出 Markdown…',
+    'exportCsv': '导出 CSV…',
+    'exportTxt': '导出纯文本…',
+    'filePrint': '打印／PDF…',
+    'imported': '已导入 {n} 个笔记',
+    'savedAs': '已保存 {name}',
+    'notTallynote': '不是 Tallynote 文件',
     'untitled': '未命名',
     'search': '搜索笔记',
     'unfiled': '未分类',

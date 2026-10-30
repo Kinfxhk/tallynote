@@ -4,6 +4,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'i18n/strings.dart';
+import 'io/document_io.dart';
+import 'io/file_actions.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -277,6 +279,112 @@ class _AppState extends State<TallynoteApp> with WidgetsBindingObserver {
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
     );
+  }
+
+  Future<void> _fileMenu() async {
+    final l = LocaleScope.of(context);
+    String t(String k) => T.of(l, k);
+    final choice = await showMenu<String>(
+      context: _navKey.currentContext!,
+      position: const RelativeRect.fromLTRB(60, 48, 0, 0),
+      items: [
+        PopupMenuItem(value: 'new', child: Text(t('fileNew'))),
+        PopupMenuItem(value: 'open', child: Text(t('fileOpen'))),
+        PopupMenuItem(value: 'copy', child: Text(t('fileSaveCopy'))),
+        const PopupMenuDivider(),
+        PopupMenuItem(value: 'md', child: Text(t('exportMd'))),
+        PopupMenuItem(value: 'csv', child: Text(t('exportCsv'))),
+        PopupMenuItem(value: 'txt', child: Text(t('exportTxt'))),
+        PopupMenuItem(value: 'print', child: Text(t('filePrint'))),
+      ],
+    );
+    switch (choice) {
+      case 'new':
+        _store.create();
+      case 'open':
+        await _openFromFile();
+      case 'copy':
+        await _saveCopy();
+      case 'md' || 'csv' || 'txt':
+        await _exportAs(choice!);
+      case 'print':
+        await _print();
+    }
+  }
+
+  // ---- file verbs ---------------------------------------------------------
+
+  Future<void> _openFromFile() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = LocaleScope.of(context);
+    try {
+      final raw = await FileActions.openDocument();
+      if (raw == null) return;
+      final parsed = DocumentIo.parse(raw);
+      final n = _store.importSheets(parsed.sheets, parsed.folders);
+      messenger.showSnackBar(
+        SnackBar(content: Text(T.format(l, 'imported', {'n': '$n'}))),
+      );
+    } on FormatException {
+      messenger.showSnackBar(SnackBar(content: Text(T.of(l, 'notTallynote'))));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not open: $e')));
+    }
+  }
+
+  Future<void> _saveCopy() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = LocaleScope.of(context);
+    final now = DateTime.now();
+    final name = DocumentIo.fileName(
+      _store.active?.title ?? 'tallynote',
+      now,
+      DocumentIo.fileExtension,
+    );
+    final ok = await FileActions.saveAs(
+      fileName: name,
+      content: DocumentIo.libraryJson(_store.sheets, _store.folders, now: now),
+      extension: DocumentIo.fileExtension,
+    );
+    if (ok) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(T.format(l, 'savedAs', {'name': name}))),
+      );
+    }
+  }
+
+  Future<void> _exportAs(String kind) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l = LocaleScope.of(context);
+    final now = DateTime.now();
+    final base = _store.active?.title ?? 'tallynote';
+    final engine = _makeEngine();
+    final sheets = _store.sheets;
+    final (content, ext) = switch (kind) {
+      'md' => (DocumentIo.markdown(sheets, engine), 'md'),
+      'csv' => (DocumentIo.csv(sheets, engine), 'csv'),
+      _ => (DocumentIo.plainText(sheets, engine), 'txt'),
+    };
+    final name = DocumentIo.fileName(base, now, ext);
+    final ok = await FileActions.saveAs(
+      fileName: name,
+      content: content,
+      extension: ext,
+    );
+    if (ok) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(T.format(l, 'savedAs', {'name': name}))),
+      );
+    }
+  }
+
+  Future<void> _print() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await FileActions.printSheets(_store.sheets, _makeEngine());
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not print: $e')));
+    }
   }
 
   /// Ctrl/Cmd+S: write now instead of waiting for the debounce.
@@ -585,6 +693,7 @@ class _AppState extends State<TallynoteApp> with WidgetsBindingObserver {
                             onMenu: wide
                                 ? _toggleSidebar
                                 : () => _scaffoldKey.currentState?.openDrawer(),
+                            onFile: _fileMenu,
                             onSettings: () => showSettingsSheet(
                               context: _navKey.currentContext!,
                               dark: _dark,
@@ -827,6 +936,7 @@ class _Header extends StatelessWidget {
   /// menu button when the sidebar is actually hidden.
   final bool showMenu;
   final VoidCallback onMenu;
+  final VoidCallback onFile;
   final VoidCallback onSettings;
 
   const _Header({
@@ -834,6 +944,7 @@ class _Header extends StatelessWidget {
     required this.sidebarOpen,
     required this.showMenu,
     required this.onMenu,
+    required this.onFile,
     required this.onSettings,
   });
 
@@ -853,6 +964,12 @@ class _Header extends StatelessWidget {
                 icon: Icon(Icons.menu, color: Palette.faint(dark)),
               ),
             const Spacer(),
+            _IconAction(
+              icon: Icons.folder_open_outlined,
+              tooltip: LocaleScope.t(context, 'file'),
+              dark: dark,
+              onTap: onFile,
+            ),
             _IconAction(
               icon: Icons.tune,
               tooltip: LocaleScope.t(context, 'settings'),

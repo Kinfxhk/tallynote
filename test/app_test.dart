@@ -412,6 +412,25 @@ void main() {
     await tester.pump(const Duration(seconds: 2)); // let the flash expire
   });
 
+  testWidgets('the File menu offers open, save a copy, exports and print',
+      (tester) async {
+    await boot(tester);
+    await tester.tap(find.byIcon(Icons.folder_open_outlined).first);
+    await tester.pumpAndSettle();
+
+    for (final label in [
+      'New sheet',
+      'Open file…',
+      'Save a copy…',
+      'Export Markdown…',
+      'Export CSV…',
+      'Export text…',
+      'Print / PDF…',
+    ]) {
+      expect(find.text(label), findsAtLeastNWidgets(1), reason: label);
+    }
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

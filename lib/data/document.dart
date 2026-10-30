@@ -217,6 +217,33 @@ class DocumentStore extends ChangeNotifier {
     return copy;
   }
 
+  /// Brings sheets in from a file. Ids are always regenerated, so importing
+  /// the same file twice cannot overwrite anything.
+  int importSheets(List<Sheet> incoming, List<Folder> incomingFolders) {
+    final folderMap = <String, String>{};
+    for (final f in incomingFolders) {
+      final created = createFolder(f.name);
+      folderMap[f.id] = created.id;
+    }
+    for (final s in incoming) {
+      sheets.insert(
+        0,
+        Sheet(
+          id: _newId(),
+          title: s.title,
+          content: s.content,
+          folderId: s.folderId == null ? null : folderMap[s.folderId],
+          pinned: s.pinned,
+          customTitle: true,
+        ),
+      );
+    }
+    if (sheets.isNotEmpty) activeId = sheets.first.id;
+    notifyListeners();
+    _persist();
+    return incoming.length;
+  }
+
   void delete(String id) {
     sheets.removeWhere((s) => s.id == id);
     if (sheets.isEmpty) {
