@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Tallynote
+GenericName=Notepad calculator
+Comment=The notepad that adds up
+Exec=tallynote
+Icon=tallynote
+Terminal=false
+Categories=Utility;Calculator;Office;
+Keywords=calculator;notepad;notes;math;units;currency;
+StartupWMClass=app.tallynote.tallynote

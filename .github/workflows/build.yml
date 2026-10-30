@@ -50,10 +50,39 @@ jobs:
       - run: flutter pub get
       - run: flutter build linux --release
       - run: tar -czf tallynote-linux.tar.gz -C build/linux/x64/release bundle
+      - name: Build .deb
+        run: |
+          set -e
+          VER=$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')
+          PKG=tallynote_${VER}_amd64
+          mkdir -p $PKG/DEBIAN $PKG/usr/lib/tallynote $PKG/usr/bin \
+                   $PKG/usr/share/applications $PKG/usr/share/icons/hicolor/512x512/apps
+          cp -r build/linux/x64/release/bundle/* $PKG/usr/lib/tallynote/
+          ln -s /usr/lib/tallynote/tallynote $PKG/usr/bin/tallynote
+          cp packaging/linux/tallynote.desktop $PKG/usr/share/applications/
+          cp packaging/linux/tallynote.png $PKG/usr/share/icons/hicolor/512x512/apps/tallynote.png
+          INSTALLED=$(du -sk $PKG/usr | cut -f1)
+          cat > $PKG/DEBIAN/control <<EOF
+          Package: tallynote
+          Version: $VER
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Installed-Size: $INSTALLED
+          Depends: libgtk-3-0, libblkid1, liblzma5
+          Maintainer: KinFx <kinfxhk@gmail.com>
+          Homepage: https://github.com/Kinfxhk/tallynote
+          Description: Notepad calculator - the notepad that adds up
+           Every line is a calculation; answers line up on the decimal point.
+           Offline first, no account, no cloud.
+          EOF
+          dpkg-deb --build --root-owner-group $PKG
       - uses: actions/upload-artifact@v4
         with:
           name: tallynote-linux
-          path: tallynote-linux.tar.gz
+          path: |
+            tallynote-linux.tar.gz
+            tallynote_*_amd64.deb
 
   windows:
     needs: test
