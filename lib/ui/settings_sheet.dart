@@ -193,7 +193,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         _switch(dark, (v) {
           setState(() => dark = v);
           widget.onTheme(v);
-        }),
+        }, 'dark'),
       ),
       _row(
         T.of(locale, 'answers'),
@@ -201,7 +201,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         _switch(answers, (v) {
           setState(() => answers = v);
           widget.onAnswers(v);
-        }),
+        }, 'answers'),
       ),
       _row(
         T.of(locale, 'signColours'),
@@ -209,7 +209,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         _switch(signColours, (v) {
           setState(() => signColours = v);
           widget.onSignColours(v);
-        }),
+        }, 'sign'),
       ),
       if (signColours) ...[
         _colourRow(T.of(locale, 'positive'), pos, (name) {
@@ -411,11 +411,13 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         ),
       );
 
-  Widget _switch(bool value, ValueChanged<bool> onChanged) => Switch(
-    value: value,
-    onChanged: onChanged,
-    activeThumbColor: Palette.answer(dark),
-  );
+  Widget _switch(bool value, ValueChanged<bool> onChanged, [String? id]) =>
+      Switch(
+        key: id == null ? null : ValueKey('switch-$id'),
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: Palette.answer(dark),
+      );
 
   Widget _scaleButtons() {
     const presets = [1.0, 1.25, 1.5, 1.75, 2.0];
