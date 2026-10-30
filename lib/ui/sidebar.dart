@@ -244,79 +244,77 @@ class _SidebarState extends State<Sidebar> {
   Widget _sheetTile(Sheet s, {bool showFolder = false}) {
     final selected = s.id == _store.activeId;
     final folder = showFolder ? _store.folderOf(s) : null;
-    return Pressable(
-      onTap: () {
-        _store.select(s.id);
-        if (MediaQuery.sizeOf(context).width < 720) {
-          Navigator.of(context).maybePop();
-        }
-      },
-      onLongPress: () => _sheetMenu(s),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-        padding: const EdgeInsets.fromLTRB(22, 7, 8, 7),
-        decoration: BoxDecoration(
-          color: selected
-              ? (_dark ? const Color(0xFF232426) : const Color(0xFFE7E3DA))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Row(
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (s.pinned)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Icon(
-                            Icons.push_pin,
-                            size: 11,
-                            color: Palette.answer(_dark),
-                          ),
-                        ),
-                      Expanded(
-                        child: Text(
-                          s.title.isEmpty ? 'Untitled' : s.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: selected
-                                ? Palette.fg(_dark)
-                                : Palette.fg(_dark).withValues(alpha: 0.75),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (folder != null)
-                    Text(
-                      folder.name,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: Palette.faint(_dark),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Pressable(
-              onTap: () => _sheetMenu(s),
-              child: Padding(
-                padding: const EdgeInsets.all(5),
+            if (s.pinned)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
                 child: Icon(
-                  Icons.more_horiz,
-                  size: 15,
-                  color: Palette.faint(_dark),
+                  Icons.push_pin,
+                  size: 11,
+                  color: Palette.answer(_dark),
+                ),
+              ),
+            Expanded(
+              child: Text(
+                s.title.isEmpty ? 'Untitled' : s.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: selected
+                      ? Palette.fg(_dark)
+                      : Palette.fg(_dark).withValues(alpha: 0.75),
                 ),
               ),
             ),
           ],
         ),
+        if (folder != null)
+          Text(
+            folder.name,
+            style: TextStyle(fontSize: 10.5, color: Palette.faint(_dark)),
+          ),
+      ],
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      decoration: BoxDecoration(
+        color: selected
+            ? (_dark ? const Color(0xFF232426) : const Color(0xFFE7E3DA))
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Row(
+        children: [
+          // selecting and opening the menu are separate targets
+          Expanded(
+            child: Pressable(
+              onTap: () {
+                _store.select(s.id);
+                if (MediaQuery.sizeOf(context).width < 720) {
+                  Navigator.of(context).maybePop();
+                }
+              },
+              onLongPress: () => _sheetMenu(s),
+              padding: const EdgeInsets.fromLTRB(22, 7, 4, 7),
+              child: title,
+            ),
+          ),
+          Pressable(
+            onTap: () => _sheetMenu(s),
+            padding: const EdgeInsets.all(5),
+            child: Icon(
+              Icons.more_horiz,
+              size: 15,
+              color: Palette.faint(_dark),
+            ),
+          ),
+        ],
       ),
     );
   }

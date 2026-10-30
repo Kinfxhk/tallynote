@@ -118,10 +118,13 @@ class _AppState extends State<TallynoteApp> {
   }
 
   void _onStore() {
+    if (!mounted) return;
     final id = _store.activeId;
     if (id != null && !_tabs.contains(id)) _tabs.add(id);
     if (_tabs.length > 8) _tabs.removeAt(0);
     if (_store.activeId != _boundSheetId) _bindSheet();
+    // a rename, pin or folder move changes nothing else, so refresh the tree
+    setState(() {});
   }
 
   void _closeTab(String id) {
