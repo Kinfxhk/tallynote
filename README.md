@@ -10,10 +10,10 @@ Support: **[Buy Me a Coffee](https://buymeacoffee.com/kinfxhk)**
 
 | Platform | Download | Notes |
 |---|---|---|
-| Android | `app-release.apk` | signed with the release key; installed and run on a device |
-| Windows | `Tallynote-0.2.0-setup.exe` | per-user install, Start-menu shortcut, uninstaller |
+| Android | `app-release.apk` | signed with the release key |
+| Windows | `Tallynote-<version>-setup.exe` | per-user install, Start-menu shortcut, uninstaller |
 | Windows (portable) | `tallynote-windows.zip` | unzip and run `tallynote.exe` |
-| Linux | `tallynote_0.2.0_amd64.deb` | installs to `/usr/lib/tallynote` with a desktop entry |
+| Linux | `tallynote_<version>_amd64.deb` | installs to `/usr/lib/tallynote` with a desktop entry |
 | Linux (portable) | `tallynote-linux.tar.gz` | unpack and run `bundle/tallynote` |
 | Web | [kinfxhk.github.io/tallynote](https://kinfxhk.github.io/tallynote/) | deployed from `main` |
 | macOS / iOS | not yet | needs a full Xcode install |
