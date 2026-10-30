@@ -296,26 +296,40 @@ class _AppState extends State<TallynoteApp> {
       title: 'Tallynote',
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        final s = _uiScale;
         if (child == null) return const SizedBox.shrink();
+        final s = _uiScale;
         if ((s - 1).abs() < 0.01) return child;
         final mq = MediaQuery.of(context);
-        return MediaQuery(
-          data: mq.copyWith(
-            size: mq.size / s,
-            padding: mq.padding / s,
-            viewPadding: mq.viewPadding / s,
-            viewInsets: mq.viewInsets / s,
-          ),
+        final logical = mq.size / s;
+        // OverflowBox pins the child to the reduced logical size; the transform
+        // then paints it back to exactly one screen, so nothing spills out and
+        // no gap is left behind.
+        return ColoredBox(
+          color: Palette.bg(_dark),
           child: ClipRect(
-            child: Transform.scale(
-              key: const ValueKey('ui-zoom'),
-              scale: s,
+            child: OverflowBox(
               alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: mq.size.width / s,
-                height: mq.size.height / s,
-                child: child,
+              minWidth: logical.width,
+              maxWidth: logical.width,
+              minHeight: logical.height,
+              maxHeight: logical.height,
+              child: Transform.scale(
+                key: const ValueKey('ui-zoom'),
+                scale: s,
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: logical.width,
+                  height: logical.height,
+                  child: MediaQuery(
+                    data: mq.copyWith(
+                      size: logical,
+                      padding: mq.padding / s,
+                      viewPadding: mq.viewPadding / s,
+                      viewInsets: mq.viewInsets / s,
+                    ),
+                    child: child,
+                  ),
+                ),
               ),
             ),
           ),

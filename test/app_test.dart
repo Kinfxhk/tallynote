@@ -302,6 +302,30 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
+  testWidgets('UI scale shrinks the logical viewport, not just the text',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'tallynote.uiScale': 1.5});
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(const TallynoteApp());
+    await tester.pump(const Duration(milliseconds: 60));
+
+    final zoom = find.byKey(const ValueKey('ui-zoom'));
+    expect(zoom, findsOneWidget);
+    expect(tester.widget<Transform>(zoom).transform.storage[0], closeTo(1.5, 0.01));
+
+    // inside the zoom wrapper the app lays out on an 800x533 canvas
+    final ctx = tester.element(find.byType(EditorView));
+    final size = MediaQuery.sizeOf(ctx);
+    expect(size.width, closeTo(800, 0.5));
+    expect(size.height, closeTo(800 / 1.5, 0.5));
+
+    // and the painted result still covers exactly one screen
+    expect(tester.getSize(find.byType(Scaffold)).width, closeTo(800, 0.5));
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(
