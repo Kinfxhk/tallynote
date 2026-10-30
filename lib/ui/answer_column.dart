@@ -46,7 +46,9 @@ class AnswerParts {
     String group = ',',
   }) {
     final number = RegExp(
-      r'\d(?:\d|' + RegExp.escape(group) + r')*(?:' +
+      r'\d(?:\d|' +
+          RegExp.escape(group) +
+          r')*(?:' +
           RegExp.escape(decimal) +
           r'\d+)?',
     );

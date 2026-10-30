@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'data/document.dart';
 import 'data/rates.dart';
 import 'engine/engine.dart';
+import 'engine/values.dart';
 import 'ui/editor_view.dart';
 import 'ui/feedback.dart';
 import 'ui/folding.dart';
@@ -49,6 +50,7 @@ class _AppState extends State<TallynoteApp> {
   double _answerW = 212;
   double _uiScale = 1.0;
   String? _locale; // null = follow the system
+  String _numberPreset = 'us';
   bool _lineNumbers = true;
   bool _showTabs = true;
   final List<String> _tabs = [];
@@ -94,10 +96,15 @@ class _AppState extends State<TallynoteApp> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_onKey);
-    _engine = SheetEngine(rates: Rates.current);
+    _engine = _makeEngine();
     _controller.addListener(_onText);
     unawaited(_boot());
   }
+
+  SheetEngine _makeEngine() => SheetEngine(
+    rates: Rates.current,
+    format: NumberFormat.ofPreset(_numberPreset),
+  );
 
   Future<void> _boot() async {
     final prefs = await SharedPreferences.getInstance();
@@ -108,6 +115,7 @@ class _AppState extends State<TallynoteApp> {
     _answerW = prefs.getDouble('tallynote.answerWidth') ?? 212;
     _uiScale = prefs.getDouble('tallynote.uiScale') ?? 1.0;
     _locale = prefs.getString('tallynote.locale');
+    _numberPreset = prefs.getString('tallynote.numberFormat') ?? 'us';
     _lineNumbers = prefs.getBool('tallynote.lineNumbers') ?? true;
     _showTabs = prefs.getBool('tallynote.showTabs') ?? true;
     _signColours = prefs.getBool('tallynote.signColours') ?? true;
@@ -120,7 +128,7 @@ class _AppState extends State<TallynoteApp> {
     await Rates.load(allowNetwork: _autoRates);
     if (!mounted) return;
     setState(() {
-      _engine = SheetEngine(rates: Rates.current);
+      _engine = _makeEngine();
       _recalc();
     });
   }
@@ -311,6 +319,7 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setDouble('tallynote.answerWidth', _answerW);
     await prefs.setDouble('tallynote.uiScale', _uiScale);
     if (_locale != null) await prefs.setString('tallynote.locale', _locale!);
+    await prefs.setString('tallynote.numberFormat', _numberPreset);
     await prefs.setBool('tallynote.lineNumbers', _lineNumbers);
     await prefs.setBool('tallynote.showTabs', _showTabs);
     await prefs.setBool('tallynote.signColours', _signColours);
@@ -571,8 +580,17 @@ class _AppState extends State<TallynoteApp> {
                               showTabs: _showTabs,
                               uiScale: _uiScale,
                               locale: _locale ?? _effectiveLocale,
+                              numberPreset: _numberPreset,
                               onLocale: (v) {
                                 setState(() => _locale = v);
+                                _saveSettings();
+                              },
+                              onNumberPreset: (v) {
+                                setState(() {
+                                  _numberPreset = v;
+                                  _engine = _makeEngine();
+                                });
+                                _recalc();
                                 _saveSettings();
                               },
                               posName: _posName,

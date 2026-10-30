@@ -21,7 +21,9 @@ Future<void> showSettingsSheet({
   required bool showTabs,
   required double uiScale,
   required String locale,
+  required String numberPreset,
   required ValueChanged<String> onLocale,
+  required ValueChanged<String> onNumberPreset,
   required ValueChanged<bool> onAnswers,
   required ValueChanged<bool> onTheme,
   required ValueChanged<bool> onAutoRates,
@@ -48,6 +50,8 @@ Future<void> showSettingsSheet({
       showTabs: showTabs,
       uiScale: uiScale,
       locale: locale,
+      numberPreset: numberPreset,
+      onNumberPreset: onNumberPreset,
       onLocale: onLocale,
       onAnswers: onAnswers,
       onTheme: onTheme,
@@ -76,7 +80,9 @@ class _SettingsDialog extends StatefulWidget {
   final bool showTabs;
   final double uiScale;
   final String locale;
+  final String numberPreset;
   final ValueChanged<String> onLocale;
+  final ValueChanged<String> onNumberPreset;
   final ValueChanged<bool> onAnswers;
   final ValueChanged<bool> onTheme;
   final ValueChanged<bool> onAutoRates;
@@ -101,7 +107,9 @@ class _SettingsDialog extends StatefulWidget {
     required this.showTabs,
     required this.uiScale,
     required this.locale,
+    required this.numberPreset,
     required this.onLocale,
+    required this.onNumberPreset,
     required this.onAnswers,
     required this.onTheme,
     required this.onAutoRates,
@@ -131,6 +139,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   late bool showTabs = widget.showTabs;
   late double scale = widget.uiScale;
   late String locale = widget.locale;
+  late String preset = widget.numberPreset;
   String? rateError;
 
   @override
@@ -231,6 +240,36 @@ class _SettingsDialogState extends State<_SettingsDialog> {
         T.of(locale, 'textSize'),
         T.of(locale, 'textSizeHint'),
         _scaleButtons(),
+      ),
+      _row(
+        'Number format',
+        'US 1,234.56 · EU 1.234,56',
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final p in const ['us', 'eu'])
+              TextButton(
+                onPressed: () {
+                  setState(() => preset = p);
+                  widget.onNumberPreset(p);
+                },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(40, 28),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  foregroundColor: preset == p
+                      ? Palette.answer(dark)
+                      : Palette.faint(dark),
+                ),
+                child: Text(
+                  p.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: preset == p ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       _row(
         T.of(locale, 'lineNumbers'),

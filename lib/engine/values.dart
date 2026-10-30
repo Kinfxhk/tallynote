@@ -114,8 +114,7 @@ class NumberFormat {
   static const us = NumberFormat();
   static const eu = NumberFormat(decimal: ',', group: '.');
 
-  static NumberFormat ofPreset(String preset) =>
-      preset == 'eu' ? eu : us;
+  static NumberFormat ofPreset(String preset) => preset == 'eu' ? eu : us;
 }
 
 const Map<String, String> currencyAliases = {

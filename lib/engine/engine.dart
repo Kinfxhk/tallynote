@@ -929,7 +929,9 @@ class SheetEngine {
     if (v == null) return null;
     // the sign is its own token; a minus on the first token or right after
     // an opening paren is unary
-    if (i > 0 && tokens[i - 1].type == TokType.op && tokens[i - 1].text == '-') {
+    if (i > 0 &&
+        tokens[i - 1].type == TokType.op &&
+        tokens[i - 1].text == '-') {
       if (i == 1 || tokens[i - 2].type == TokType.lparen) return NumValue(-v);
     }
     return NumValue(v);
