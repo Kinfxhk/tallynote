@@ -4,7 +4,15 @@
 
 Offline first: nothing is computed in the cloud, and the page works with the network unplugged.
 
-**[Open the web app](https://kinfxhk.github.io/tallynote/)** · **[Download the Android APK](https://github.com/Kinfxhk/tallynote/releases/latest)**
+**[Open the web app](https://kinfxhk.github.io/tallynote/)** · **[All downloads](https://github.com/Kinfxhk/tallynote/releases/latest)**
+
+| Platform | Download | Status |
+|---|---|---|
+| Android | `app-release.apk` | built and run on a device |
+| Windows | `tallynote-windows.zip` (portable) | built and run on Windows 11 |
+| Linux | `tallynote-linux.tar.gz` (portable) | built in CI |
+| Web | [kinfxhk.github.io/tallynote](https://kinfxhk.github.io/tallynote/) | deployed from `main` |
+| macOS | not yet | needs a full Xcode install |
 
 <img src="docs/android-formatting.png" width="300" alt="Tallynote on Android: a draft line, a bold line, and answers aligned on the decimal point">
 
