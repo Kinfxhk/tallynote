@@ -209,6 +209,14 @@ void main() {
     expect(r[13].display, r'-$12,235.10');
   });
 
+  test('strict mode refuses to guess', () {
+    final strict = SheetEngine(now: DateTime(2026, 10, 30), strict: true);
+    expect(strict.evaluate(['(1+']).first.error, isNotNull);
+    expect(strict.evaluate(['午餐 120']).first.display, isNull);
+    // the forgiving default still answers prose with its number
+    expect(engine.evaluate(['午餐 120']).first.display, '120');
+  });
+
   test('text lines stay quiet', () {
     expect(one('hello world'), isNull);
   });

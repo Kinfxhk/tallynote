@@ -97,6 +97,21 @@ Honest notes: Soulver has integrations this project deliberately does not (Wolfr
 | CLI / scripting | ❌ | ✅ | ✅ numi-cli | ❌ |
 | Wolfram, stocks, weather | ❌ by design | ✅ | ⚠️ | ❌ |
 
+## From the command line
+
+The engine is pure Dart, so it also compiles to a single binary — handy for
+scripts and agents:
+
+```bash
+dart compile exe bin/tallynote.dart -o build/tallynote
+./build/tallynote "5 kg + 3 lb"
+./build/tallynote -f budget.txt --json --total --strict
+```
+
+`--json` returns `value` (typed) alongside `display`; `--strict` turns off the
+human-friendly guessing so a broken line is an error. See
+[docs/agents.md](docs/agents.md) for the agent/MCP plan.
+
 ## Design principles
 
 1. **Offline is correct.** No network call can change an answer. The only optional fetch is the daily rate refresh, and it can be switched off in Settings.

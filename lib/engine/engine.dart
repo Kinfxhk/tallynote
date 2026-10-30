@@ -39,6 +39,10 @@ class SheetEngine {
 
   final UnitRegistry units;
   final DateParser dates;
+
+  /// Strict mode turns off the two forgiveness rules (reading past leading
+  /// prose, answering a lone number). Agents want a real error instead.
+  final bool strict;
   Map<String, double> rates;
   final String baseCurrency;
 
@@ -46,6 +50,7 @@ class SheetEngine {
     UnitRegistry? units,
     DateTime? now,
     Map<String, double>? rates,
+    this.strict = false,
     this.baseCurrency = 'HKD',
   })  : units = units ?? UnitRegistry(),
         dates = DateParser(now: now),
@@ -202,7 +207,7 @@ class SheetEngine {
         ));
       } on UnresolvedWord {
         // "午餐 120" is prose with a number in it: show the number.
-        final fallback = _loneNumber(body);
+        final fallback = strict ? null : _loneNumber(body);
         values.add(fallback);
         leafAt.add(fallback);
         if (collect && tag != null && fallback != null) {
@@ -215,7 +220,7 @@ class SheetEngine {
           tag: tag,
         ));
       } catch (e) {
-        final fallback = _loneNumber(body);
+        final fallback = strict ? null : _loneNumber(body);
         values.add(fallback);
         leafAt.add(fallback);
         if (collect && tag != null && fallback != null) {
@@ -509,7 +514,9 @@ class SheetEngine {
     // the expression starting at each later word boundary. "買嘢 4300 x 30%"
     // still answers.
     Object? lastError;
-    for (final candidate in _candidates(expanded).take(8)) {
+    final candidates =
+        strict ? [expanded] : _candidates(expanded).take(8).toList();
+    for (final candidate in candidates) {
       try {
         final node = Parser.parseExpression(candidate, units);
         return Evaluator(ctx).eval(node);
