@@ -188,6 +188,34 @@ void main() {
     expect(b.top, closeTo(a.top + a.height, 40)); // next line, not merged
   });
 
+  testWidgets('a heading folds and unfolds its section', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editor, '# A\n100\n200\n300');
+    await tester.pump(const Duration(milliseconds: 80));
+
+    Finder foldIcon(IconData i) => find.descendant(
+          of: find.byType(EditorView),
+          matching: find.byIcon(i),
+        );
+    expect(foldIcon(Icons.keyboard_arrow_down), findsOneWidget);
+    await tester.tap(foldIcon(Icons.keyboard_arrow_down));
+    await tester.pump(const Duration(milliseconds: 80));
+
+    var field = tester.widget<TextField>(editor);
+    expect(field.controller!.text, contains('3 lines'));
+    expect(field.readOnly, isTrue, reason: 'folding locks editing');
+
+    await tester.tap(foldIcon(Icons.keyboard_arrow_right));
+    await tester.pump(const Duration(milliseconds: 80));
+    field = tester.widget<TextField>(editor);
+    expect(field.controller!.text, isNot(contains('⋯')));
+    expect(field.readOnly, isFalse);
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

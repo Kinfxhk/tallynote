@@ -22,6 +22,13 @@ class EditorView extends StatefulWidget {
   final ValueChanged<double>? onAnswerWidth;
   final bool signColours;
   final void Function(int line, String token)? onInsertReference;
+
+  /// visible index -> original line index (-1 for a fold summary line)
+  final List<int> lineMap;
+  final Set<int> foldable;
+  final Set<int> folded;
+  final void Function(int originalLine)? onToggleFold;
+  final bool readOnly;
   final Color? positiveColour;
   final Color? negativeColour;
 
@@ -37,6 +44,11 @@ class EditorView extends StatefulWidget {
     this.onAnswerWidth,
     this.signColours = true,
     this.onInsertReference,
+    this.lineMap = const [],
+    this.foldable = const {},
+    this.folded = const {},
+    this.onToggleFold,
+    this.readOnly = false,
     this.positiveColour,
     this.negativeColour,
   });
@@ -76,7 +88,7 @@ class _EditorViewState extends State<EditorView> {
   Widget build(BuildContext context) {
     final style = editorStyle(widget.dark);
     const stepGutter = 30.0; // finger-sized, but the icon stays small
-    const gutterW = 38.0; // faint line numbers, Notepad++ style
+    const gutterW = 54.0; // fold arrow + faint line number, code-editor style
     final answerW = widget.answersVisible ? widget.answerWidth : 0.0;
 
     return LayoutBuilder(
@@ -100,18 +112,23 @@ class _EditorViewState extends State<EditorView> {
                     top: (tops.length > i ? tops[i] : 0) + 6,
                     left: 0,
                     width: gutterW - 10,
-                    child: IgnorePointer(
-                      child: Text(
-                        '${i + 1}',
-                        key: ValueKey('gutter-${i + 1}'),
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontFamily: monoFamily,
-                          fontSize: 11,
-                          color: Palette.faint(widget.dark)
-                              .withValues(alpha: 0.55),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 14, child: _foldArrow(i)),
+                        Expanded(
+                          child: Text(
+                            '${i + 1}',
+                            key: ValueKey('gutter-${i + 1}'),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontFamily: monoFamily,
+                              fontSize: 11,
+                              color: Palette.faint(widget.dark)
+                                  .withValues(alpha: 0.55),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 Padding(
@@ -126,6 +143,7 @@ class _EditorViewState extends State<EditorView> {
                       height: 28 / 15,
                       forceStrutHeight: true,
                     ),
+                    readOnly: widget.readOnly,
                     cursorColor: Palette.answer(widget.dark),
                     cursorWidth: 1.6,
                     decoration: const InputDecoration(
@@ -222,6 +240,25 @@ class _EditorViewState extends State<EditorView> {
   /// Mirrors SheetEngine.explain: two or more operations is "complex".
   static bool _hasOperators(String line) =>
       RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
+
+  Widget _foldArrow(int visibleIndex) {
+    final original = visibleIndex < widget.lineMap.length
+        ? widget.lineMap[visibleIndex]
+        : visibleIndex;
+    if (widget.onToggleFold == null || !widget.foldable.contains(original)) {
+      return const SizedBox.shrink();
+    }
+    final isFolded = widget.folded.contains(original);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => widget.onToggleFold!(original),
+      child: Icon(
+        isFolded ? Icons.keyboard_arrow_right : Icons.keyboard_arrow_down,
+        size: 14,
+        color: Palette.faint(widget.dark).withValues(alpha: 0.8),
+      ),
+    );
+  }
 
   /// One answer cell, with drag-to-reference when the sheet supports it.
   Widget _cell(int i, _ColumnMetrics metrics) {

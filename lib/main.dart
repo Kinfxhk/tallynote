@@ -9,6 +9,7 @@ import 'data/rates.dart';
 import 'engine/engine.dart';
 import 'ui/editor_view.dart';
 import 'ui/feedback.dart';
+import 'ui/folding.dart';
 import 'ui/formatting.dart';
 import 'ui/marked_controller.dart';
 import 'ui/settings_sheet.dart';
@@ -41,6 +42,11 @@ class _AppState extends State<TallynoteApp> {
   bool _autoRates = true;
   bool _steps = true;
   double _answerW = 212;
+
+  /// non-null while a section is folded: the full document, set aside
+  List<String>? _foldSource;
+  Set<int> _foldedLines = {};
+  List<int> _lineMap = const [];
   bool _signColours = true;
   String _posName = ''; // empty = the built-in paper-and-ink colours
   String _negName = '';
@@ -82,11 +88,47 @@ class _AppState extends State<TallynoteApp> {
     if (_store.activeId != _boundSheetId) _bindSheet();
   }
 
+  Set<int> get _foldable {
+    final src = _foldSource ?? _controller.text.split('\n');
+    return {
+      for (var i = 0; i < src.length; i++)
+        if (isHeading(src[i])) i,
+    };
+  }
+
+  /// Fold or unfold the section that starts at [original].
+  /// Folding swaps the visible text for a projection, so the editor is
+  /// read-only until the section is opened again — nothing can be lost.
+  void _toggleFold(int original) {
+    final source = _foldSource ?? _controller.text.split('\n');
+    final folded = Set<int>.from(_foldedLines);
+    if (!folded.remove(original)) folded.add(original);
+
+    if (folded.isEmpty) {
+      _controller.text = source.join('\n');
+      _foldSource = null;
+      _foldedLines = {};
+      _lineMap = List<int>.generate(source.length, (i) => i);
+      _recalc();
+      return;
+    }
+
+    final result = foldDocument(source, folded);
+    _foldSource = source;
+    _foldedLines = folded;
+    _lineMap = result.map;
+    _controller.text = result.visibleLines.join('\n');
+    _recalc();
+  }
+
   void _bindSheet() {
     final sheet = _store.active;
     if (sheet == null) return;
     _boundSheetId = sheet.id;
     _syncing = true;
+    _foldSource = null;
+    _foldedLines = {};
+    _lineMap = const [];
     _controller.text = sheet.content;
     _syncing = false;
     _recalc();
@@ -302,6 +344,11 @@ class _AppState extends State<TallynoteApp> {
                                   explain: _engine.explain,
                                   answerWidth: _answerW,
                                   onInsertReference: _insertReference,
+                                  lineMap: _lineMap,
+                                  foldable: _foldable,
+                                  folded: _foldedLines,
+                                  onToggleFold: _toggleFold,
+                                  readOnly: _foldSource != null,
                                   signColours: _signColours,
                                   positiveColour: _posName.isEmpty
                                       ? null
