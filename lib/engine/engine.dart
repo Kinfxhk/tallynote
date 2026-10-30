@@ -593,11 +593,67 @@ class SheetEngine {
       }
     }
 
-    // dates: "<date phrase> ± <duration>"
+    // "<date> - <date>" is the gap between them, not arithmetic on the digits.
+    // Without this "2026-10-31 - 2026-01-01" read as 2026-10-31-2026-1-1 = -43.
+    final gap = RegExp(r'\s+-\s+|\s+to\s+|\s+until\s+').firstMatch(body);
+    if (gap != null) {
+      final a = dates.parse(body.substring(0, gap.start));
+      final b = dates.parse(body.substring(gap.end));
+      if (a != null && b != null) {
+        // "A - B" counts backwards from A; "A to B" counts forwards.
+        final seconds = gap.group(0)!.trim() == '-'
+            ? a.difference(b).inSeconds
+            : b.difference(a).inSeconds;
+        return DurationValue(seconds.toDouble());
+      }
+    }
+
+    // "30 days from today", "3 weeks ago"
+    final shift = RegExp(
+      r'^(\d+(?:\.\d+)?)\s*(days?|weeks?|months?|years?)\s+(from|after|before|ago)\b\s*(.*)$',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (shift != null) {
+      final n = double.tryParse(shift.group(1)!);
+      final unit = shift.group(2)!.toLowerCase();
+      final dir = shift.group(3)!.toLowerCase();
+      final rest = shift.group(4)!.trim();
+      final base = rest.isEmpty ? dates.now : dates.parse(rest);
+      if (n != null && base != null) {
+        final days = switch (unit) {
+          'week' || 'weeks' => n * 7,
+          'month' || 'months' => n * 30,
+          'year' || 'years' => n * 365,
+          _ => n,
+        };
+        final signed = dir == 'before' || dir == 'ago' ? -days : days;
+        return DateValue(base.add(Duration(seconds: (signed * 86400).round())));
+      }
+    }
+
+    // dates: "<date> ± <duration>"
     final dateMath = RegExp(r'^(.*?)\s*([+-])\s*(.+)$').firstMatch(body);
     if (dateMath != null) {
       final left = dates.parse(dateMath.group(1)!);
       if (left != null) {
+        // "today + 3 workdays" skips Saturday and Sunday.
+        final wd = RegExp(
+          r'^(\d{1,5})\s*(?:work|business)\s*days?$',
+          caseSensitive: false,
+        ).firstMatch(dateMath.group(3)!.trim());
+        if (wd != null) {
+          final step = dateMath.group(2) == '-' ? -1 : 1;
+          var d = left;
+          var leftToGo = int.parse(wd.group(1)!);
+          while (leftToGo > 0) {
+            d = d.add(Duration(days: step));
+            if (d.weekday != DateTime.saturday &&
+                d.weekday != DateTime.sunday) {
+              leftToGo--;
+            }
+          }
+          return DateValue(d, hasTime: left.hour != 0 || left.minute != 0);
+        }
         final dur = dates.parseDuration(dateMath.group(3)!);
         if (dur != null) {
           final signed = dateMath.group(2) == '-'
@@ -643,6 +699,11 @@ class SheetEngine {
         hasTime: RegExp(r'\d:\d|am|pm', caseSensitive: false).hasMatch(body),
       );
     }
+
+    // "2h 30m", "3 hours 20 minutes", "1h 2m 3s" — a duration, not a product
+    // of a number and a unit.
+    final span = _durationLine(body);
+    if (span != null) return span;
 
     return _parseValue(
       body,
@@ -709,6 +770,10 @@ class SheetEngine {
     for (var i = 1; i < src.length; i++) {
       if (src[i - 1] != ' ' || src[i] == ' ') continue;
       if (!_isProse(src.substring(0, i))) return;
+      // "rent * 12" is a failed expression, not prose in front of a number:
+      // skipping to "* 12" would answer 12. A leading minus is kept, because
+      // "貸款 -500000" is a signed value in prose.
+      if ('+*/^%×÷(),=<>'.contains(src[i])) return;
       yield src.substring(i);
     }
   }
@@ -914,11 +979,82 @@ class SheetEngine {
     return const ErrorValue('unknown aggregate');
   }
 
+  /// Time written the way people say it: `2h 30m`, `3 hours 20 minutes`,
+  /// `1h 2m 3s`, and sums of those (`2h 30m + 45m`).
+  ///
+  /// An hour component is required, so a lone `45m` keeps meaning 45 metres
+  /// and `5 s` keeps meaning five seconds of a unit answer, not a duration.
+  Value? _durationLine(String body) {
+    final into = RegExp(
+      r'^(.*?)\s+in\s+(seconds?|minutes?|hours?|days?)$',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (into != null) {
+      final left = _durationLine(into.group(1)!);
+      if (left is DurationValue) {
+        final unit = switch (into.group(2)!.toLowerCase()) {
+          'seconds' || 'second' => 's',
+          'hours' || 'hour' => 'h',
+          'days' || 'day' => 'day',
+          _ => 'min',
+        };
+        final u = units.lookup(unit);
+        if (u != null) {
+          return NumValue(left.seconds / u.factor, u);
+        }
+      }
+      return null;
+    }
+
+    final token = RegExp(
+      r'(\d+(?:\.\d+)?)\s*(h|hr|hrs|hours?|m|min|mins|minutes?|s|sec|secs|seconds?)\b|([+-])',
+      caseSensitive: false,
+    );
+    final all = token.allMatches(body).toList();
+    if (all.isEmpty) return null;
+    if (body.replaceAll(token, '').replaceAll(RegExp(r'\s'), '').isNotEmpty) {
+      return null;
+    }
+    double? secondsOf(String unit) => switch (unit.toLowerCase()) {
+      'h' || 'hr' || 'hrs' || 'hour' || 'hours' => 3600,
+      'm' || 'min' || 'mins' || 'minute' || 'minutes' => 60,
+      's' || 'sec' || 'secs' || 'second' || 'seconds' => 1,
+      _ => null,
+    };
+    final time = all.where((m) => m.group(1) != null);
+    if (!time.any((m) => secondsOf(m.group(2)!) == 3600)) return null;
+
+    var total = 0.0;
+    var sign = 1.0;
+    for (final m in all) {
+      final op = m.group(3);
+      if (op != null && m.group(1) == null) {
+        sign = op == '-' ? -1 : 1;
+        continue;
+      }
+      final n = double.tryParse(m.group(1)!);
+      final unit = secondsOf(m.group(2)!);
+      if (n == null || unit == null) return null;
+      total += sign * n * unit;
+      sign = 1;
+    }
+    return DurationValue(total);
+  }
+
   /// One number, read the way the lexer would read it. A grouping mark that
   /// is not exactly three digits (`1,23` in US, `1.23` in EU) must not be
   /// rewritten into a different integer.
   Value? _loneNumber(String s) {
     final tokens = Lexer(s, format: format).tokenize();
+    // A number beside an operator is an expression we could not parse, not
+    // prose to quote back: answering "rent * 12" as 12 is a wrong answer.
+    for (var i = 0; i < tokens.length; i++) {
+      final t = tokens[i];
+      if (t.type != TokType.op) continue;
+      final unary = i == 0 || tokens[i - 1].type == TokType.lparen;
+      if (unary && (t.text == '-' || t.text == '+')) continue;
+      return null;
+    }
     final at = [
       for (var i = 0; i < tokens.length; i++)
         if (tokens[i].type == TokType.number) i,

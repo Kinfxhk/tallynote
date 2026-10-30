@@ -19,6 +19,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="The notepad that adds up — every line is a calculation.">
+  <meta name="theme-color" content="#FAF9F6">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -42,5 +43,16 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Tallynote's own worker: Flutter's generated one unregisters itself, and
+    // an offline notepad must still open with the network unplugged.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker
+          .register(new URL('service_worker.js', document.baseURI))
+          .catch(function (e) { console.warn('tallynote: no offline cache', e); });
+      });
+    }
+  </script>
 </body>
 </html>

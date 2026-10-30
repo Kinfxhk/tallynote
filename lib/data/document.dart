@@ -74,6 +74,11 @@ class DocumentStore extends ChangeNotifier {
   /// nothing may write over the original until the user acts.
   bool _keepBackup = false;
 
+  /// The last write did not land (quota exceeded, private mode). The status
+  /// bar must not claim "Saved" while this is true: a silent save failure is
+  /// how a notepad loses a day's work.
+  bool saveFailed = false;
+
   Sheet? get active =>
       sheets.where((s) => s.id == activeId).firstOrNull ??
       (sheets.isEmpty ? null : sheets.first);
@@ -169,7 +174,7 @@ class DocumentStore extends ChangeNotifier {
     // the backup is all that is left of the damaged store: do not bury it
     if (_keepBackup) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    final ok = await prefs.setString(
       _key,
       jsonEncode({
         'v': 2,
@@ -177,6 +182,13 @@ class DocumentStore extends ChangeNotifier {
         'sheets': sheets.map((s) => s.toJson()).toList(),
       }),
     );
+    if (!ok && !saveFailed) {
+      saveFailed = true;
+      notifyListeners();
+    } else if (ok && saveFailed) {
+      saveFailed = false;
+      notifyListeners();
+    }
     if (activeId != null) await prefs.setString(_activeKey, activeId!);
   }
 

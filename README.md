@@ -6,6 +6,10 @@ Offline first: nothing is computed in the cloud, and the page works with the net
 
 **[Open the web app](https://kinfxhk.github.io/tallynote/)** · **[All downloads](https://github.com/Kinfxhk/tallynote/releases/latest)**
 
+The web app is installable: in Chrome or Edge, **Install Tallynote** puts it in the Dock and it
+opens with the network unplugged. Notes are stored on the device, and closing the tab never loses
+the last line — the status bar shows *editing…* until the write lands.
+
 Support: **[Buy Me a Coffee](https://buymeacoffee.com/kinfxhk)**
 
 | Platform | Download | Notes |
@@ -48,7 +52,9 @@ today + 2 weeks                →  13 November 2026
 - Percentages in plain words: `15% of 300`, `25% off 159.99`, `20 is what % of 80`, `5% of what is 150`
 - Units (length, mass, area, volume, speed, time, data, angle, temperature); mixed units convert on the fly
 - Currency with daily ECB rates, cached for offline use
-- Dates, durations and time zones; `if … then … else`; rule of three; compound interest
+- Dates, durations and time zones: `today + 3 workdays`, `30 days from today`, `2026-10-31 - 2026-01-01` → 303 days, `3pm HKT in New York`
+- Spoken durations: `2h 30m + 45m` → 3 h 15 min, `3 hours 20 minutes in minutes` → 200 min
+- `if … then … else`; rule of three; compound interest; scientific notation (`1e3`)
 - Functions in any shape people type them: `sin 30 deg`, `sin30deg`, `max(1, 9, 4)`, `round 3.14159 2`, `pi`
 
 **Totals that suit a balance sheet**

@@ -908,6 +908,7 @@ class _AppState extends State<TallynoteApp> with WidgetsBindingObserver {
                             dark: _dark,
                             dirty: _dirty,
                             justSaved: _savedFlash,
+                            saveFailed: _store.saveFailed,
                             savedAt: _lastSaved,
                             lines: _controller.text.split('\n').length,
                             answers: _results
@@ -1013,6 +1014,7 @@ class _StatusBar extends StatelessWidget {
   final int answers;
   final bool dirty;
   final bool justSaved;
+  final bool saveFailed;
   final DateTime? savedAt;
 
   const _StatusBar({
@@ -1021,11 +1023,13 @@ class _StatusBar extends StatelessWidget {
     required this.answers,
     required this.dirty,
     required this.justSaved,
+    required this.saveFailed,
     required this.savedAt,
   });
 
   /// "editing…" while the debounce is pending, else the last save time.
   String _saveLabelFor(String locale) {
+    if (saveFailed) return T.of(locale, 'saveFailed');
     if (dirty) return T.of(locale, 'editing');
     if (justSaved) return T.of(locale, 'justSaved');
     final at = savedAt;

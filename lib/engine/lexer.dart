@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'values.dart';
 
 enum TokType { number, word, op, lparen, rparen, comma, currency, tag }
@@ -190,6 +192,25 @@ class Lexer {
     var raw = src.substring(start, _i).replaceAll(format.group, '');
     raw = raw.replaceAll(format.decimal, '.');
     var value = double.parse(raw);
+    // 1e3 / 2.5E-4 — scientific notation, but not `1e` or `2em` (a word follows)
+    if (_i + 1 < src.length &&
+        (src[_i] == 'e' || src[_i] == 'E') &&
+        (_isDigit(src[_i + 1]) ||
+            ((src[_i + 1] == '+' || src[_i + 1] == '-') &&
+                _i + 2 < src.length &&
+                _isDigit(src[_i + 2])))) {
+      final expStart = _i;
+      _i++;
+      if (src[_i] == '+' || src[_i] == '-') _i++;
+      while (_i < src.length && _isDigit(src[_i])) {
+        _i++;
+      }
+      if (_i < src.length && _isLetter(src[_i])) {
+        _i = expStart; // `1e3kg` is not a number we understand: stop at `1`
+      } else {
+        value *= math.pow(10, int.parse(src.substring(expStart + 1, _i)));
+      }
+    }
     // 5k / 1.5k shorthand; "5m" stays metres, "5b" stays bits
     if (_i < src.length && (src[_i] == 'k' || src[_i] == 'K')) {
       final next = _i + 1 < src.length ? src[_i + 1] : ' ';

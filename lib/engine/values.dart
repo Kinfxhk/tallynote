@@ -270,8 +270,13 @@ String _fmtDateTime(DateTime d) {
 
 String _fmtDuration(double seconds, NumberFormat format) {
   final s = seconds.abs();
-  if (s < 60) return '${formatNumber(seconds, format: format)} s';
-  if (s < 3600) return '${formatNumber(seconds / 60, format: format)} min';
-  if (s < 86400) return '${formatNumber(seconds / 3600, format: format)} h';
-  return '${formatNumber(seconds / 86400, format: format)} days';
+  final sign = seconds < 0 ? '-' : '';
+  if (s < 60) return '$sign${formatNumber(s, format: format)} s';
+  if (s < 3600) return '$sign${formatNumber(s / 60, format: format)} min';
+  if (s < 86400) {
+    final minutes = (s / 60).round();
+    if (minutes % 60 != 0) return '$sign${minutes ~/ 60} h ${minutes % 60} min';
+    return '$sign${formatNumber(s / 3600, format: format)} h';
+  }
+  return '$sign${formatNumber(s / 86400, format: format)} days';
 }
