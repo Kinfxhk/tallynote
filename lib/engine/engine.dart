@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'dates.dart';
 import 'evaluator.dart';
+import 'lexer.dart';
 import 'parser.dart';
 import 'units.dart';
 import 'values.dart';
@@ -71,7 +72,7 @@ class SheetEngine {
   /// ["2.5 + 7.5 = 10", "10 * 1.11 = 11.1", ...]. Empty when the line is a
   /// single value or a phrase the parser does not own.
   List<String> explain(String line) {
-    var body = line.trim();
+    var body = normalizeMathSource(line.trim());
     if (body.isEmpty) return const [];
     final tag = _extractTag(body);
     if (tag != null) body = body.substring(0, body.lastIndexOf('#')).trim();
@@ -323,6 +324,7 @@ class SheetEngine {
     required Map<String, Value> labels,
     String? tag,
   }) {
+    body = normalizeMathSource(body);
     final ctx = EvalContext(
       units: units,
       now: dates.now,
@@ -466,6 +468,15 @@ class SheetEngine {
         );
       }
     }
+
+    final zhPct = _zhPercent(
+      body,
+      ctx,
+      values: values,
+      sectionStart: sectionStart,
+      current: current,
+    );
+    if (zhPct != null) return zhPct;
 
     // "20 is what % of 80" / "20 is what percent of 80"
     final whatPct = RegExp(
@@ -701,6 +712,48 @@ class SheetEngine {
   }
 
   double? _numOf(Value? v) => v is NumValue ? v.value : null;
+
+  /// Chinese forms of the two Core percent questions.
+  ///
+  /// "20是80的百分之幾" / "20係80嘅百分之几" → 25%.
+  /// "5%的幾多是150" / "百分之5的幾是150" → 3000.
+  Value? _zhPercent(
+    String body,
+    EvalContext ctx, {
+    required List<Value?> values,
+    required int sectionStart,
+    required int current,
+  }) {
+    double? numAt(String src) {
+      final v = _parseValue(
+        src.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
+      return _numOf(v);
+    }
+
+    final what = RegExp(r'^(.*?)\s*(?:是|係)\s*(.*?)\s*(?:的|嘅)\s*百分之\s*[幾几]\s*$')
+        .firstMatch(body);
+    if (what != null) {
+      final a = numAt(what.group(1)!);
+      final b = numAt(what.group(2)!);
+      if (a != null && b != null && b != 0) return PercentValue(a / b);
+      return null;
+    }
+
+    final inverse = RegExp(
+      r'^(?:百分之\s*([\d.]+)|([\d.]+)\s*%)\s*(?:的|嘅)\s*[幾几]多?\s*(?:是|係)\s*(.+)$',
+    ).firstMatch(body);
+    if (inverse != null) {
+      final p = double.tryParse(inverse.group(1) ?? inverse.group(2)!);
+      final b = numAt(inverse.group(3)!);
+      if (p != null && b != null && p != 0) return NumValue(b / (p / 100));
+    }
+    return null;
+  }
 
   double? _years(String s) {
     final m = RegExp(

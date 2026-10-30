@@ -4,17 +4,34 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/main.dart';
+import 'package:tallynote/ui/answer_column.dart';
 import 'package:tallynote/ui/editor_view.dart';
 import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
-/// Answers are Text widgets; the editor's EditableText is not one.
-Finder answerText(String needle) =>
-    find.byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(needle));
-
+/// A whole answer, or the head of one, as a Text. The editor's
+/// EditableText is not a Text widget.
 Finder answerExact(String value) => find.byWidgetPredicate(
   (w) => w is Text && (w.data ?? '').replaceAll('\u00A0', ' ').trim() == value,
 );
+
+Finder answerDisplay(String value) =>
+    find.byWidgetPredicate((w) => w is AnswerReadout && w.display == value);
+
+/// X of the decimal point. Integers report the right edge of the head,
+/// which is the implied decimal.
+double decimalX(WidgetTester tester, String display) {
+  final cell = answerDisplay(display);
+  final dot = find.descendant(
+    of: cell,
+    matching: find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').startsWith('.'),
+    ),
+  );
+  if (dot.evaluate().isNotEmpty) return tester.getTopLeft(dot).dx;
+  final head = find.descendant(of: cell, matching: find.byType(Text));
+  return tester.getTopRight(head.first).dx;
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -100,18 +117,28 @@ void main() {
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    await tester.enterText(editor, '2000+3000\n9.5*3\n1234.5*2');
+    await tester.enterText(editor, '2000+3000\n9.5*3\n1234.5*2\n10/3');
     await tester.pump(const Duration(milliseconds: 60));
 
-    Rect rectOf(String needle) => tester.getRect(answerText(needle).first);
+    final third = tester
+        .widgetList<AnswerReadout>(find.byType(AnswerReadout))
+        .map((w) => w.display)
+        .firstWhere((d) => d.startsWith('3.333'));
 
-    final a = rectOf('5,000');
-    final b = rectOf('28.5');
-    final c = rectOf('2,469');
-    for (final r in [b, c]) {
+    Rect box(String display) => tester.getRect(answerDisplay(display));
+    final a = box('5,000');
+    for (final display in ['28.5', '2,469', third]) {
+      final r = box(display);
       expect(r.width, closeTo(a.width, 0.6));
       expect(r.right, closeTo(a.right, 0.6));
+      // integers share the implied decimal with real ones, including
+      // a fraction longer than two places
+      expect(
+        decimalX(tester, display),
+        closeTo(decimalX(tester, '5,000'), 0.6),
+      );
     }
+    expect(decimalX(tester, '28.5'), closeTo(decimalX(tester, third), 0.6));
   });
 
   testWidgets('negative answers are red, positive green', (tester) async {
@@ -180,15 +207,20 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 80));
 
-    // cents are part of the answer text, never a separate fragment
-    expect(answerText(r'$4,036.29'), findsOneWidget);
-    expect(answerText(r'$1,251.90'), findsOneWidget);
+    // cents stay on the dollar's line; the decimal points share an x
+    expect(answerDisplay(r'$4,036.29'), findsOneWidget);
+    expect(answerDisplay(r'$1,251.90'), findsOneWidget);
+    expect(
+      decimalX(tester, r'$4,036.29'),
+      closeTo(decimalX(tester, r'$1,251.90'), 0.6),
+    );
 
-    Rect rectOf(String needle) => tester.getRect(answerText(needle).first);
-    final a = rectOf(r'$4,036.29');
-    final b = rectOf(r'$1,251.90');
+    final a = tester.getRect(answerDisplay(r'$4,036.29'));
+    final b = tester.getRect(answerDisplay(r'$1,251.90'));
     expect(b.width, closeTo(a.width, 0.6));
     expect(b.top, closeTo(a.top + a.height, 40)); // next line, not merged
+    expect(tester.getTopLeft(find.text('.29')).dy, closeTo(a.top, 2));
+    expect(tester.getTopLeft(find.text('.90')).dy, closeTo(b.top, 2));
   });
 
   testWidgets('a heading folds and unfolds its section', (tester) async {
@@ -200,10 +232,8 @@ void main() {
     await tester.enterText(editor, '# A\n100\n200\n300');
     await tester.pump(const Duration(milliseconds: 80));
 
-    Finder foldIcon(IconData i) => find.descendant(
-          of: find.byType(EditorView),
-          matching: find.byIcon(i),
-        );
+    Finder foldIcon(IconData i) =>
+        find.descendant(of: find.byType(EditorView), matching: find.byIcon(i));
     expect(foldIcon(Icons.keyboard_arrow_down), findsOneWidget);
     await tester.tap(foldIcon(Icons.keyboard_arrow_down));
     await tester.pump(const Duration(milliseconds: 80));
@@ -238,16 +268,18 @@ void main() {
   testWidgets('the editor honours the UI scale', (tester) async {
     final c = TextEditingController(text: '1+1');
     addTearDown(c.dispose);
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: EditorView(
-          controller: c,
-          results: const [],
-          dark: false,
-          scale: 1.5,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: EditorView(
+            controller: c,
+            results: const [],
+            dark: false,
+            scale: 1.5,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pump();
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style?.fontSize, closeTo(22.5, 0.1));
@@ -268,10 +300,12 @@ void main() {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
 
-    GestureBinding.instance.handlePointerEvent(PointerScrollEvent(
-      position: tester.getCenter(editor),
-      scrollDelta: const Offset(0, -120),
-    ));
+    GestureBinding.instance.handlePointerEvent(
+      PointerScrollEvent(
+        position: tester.getCenter(editor),
+        scrollDelta: const Offset(0, -120),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // a HUD shows the percentage
@@ -283,10 +317,12 @@ void main() {
     expect(zoomTransform(), isNull, reason: 'reset returns to 100%');
 
     // zoom again so the transform can be asserted
-    GestureBinding.instance.handlePointerEvent(PointerScrollEvent(
-      position: tester.getCenter(editor),
-      scrollDelta: const Offset(0, -120),
-    ));
+    GestureBinding.instance.handlePointerEvent(
+      PointerScrollEvent(
+        position: tester.getCenter(editor),
+        scrollDelta: const Offset(0, -120),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // the whole tree is scaled, not just the text
@@ -302,8 +338,9 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('UI scale shrinks the logical viewport, not just the text',
-      (tester) async {
+  testWidgets('UI scale shrinks the logical viewport, not just the text', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({'tallynote.uiScale': 1.5});
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1;
@@ -314,7 +351,10 @@ void main() {
 
     final zoom = find.byKey(const ValueKey('ui-zoom'));
     expect(zoom, findsOneWidget);
-    expect(tester.widget<Transform>(zoom).transform.storage[0], closeTo(1.5, 0.01));
+    expect(
+      tester.widget<Transform>(zoom).transform.storage[0],
+      closeTo(1.5, 0.01),
+    );
 
     // inside the zoom wrapper the app lays out on an 800x533 canvas
     final ctx = tester.element(find.byType(EditorView));

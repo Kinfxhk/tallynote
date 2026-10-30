@@ -138,6 +138,56 @@ void main() {
     expect(one('5加3'), '8');
     expect(one('10減4'), '6');
     expect(one('含運費 30乘3'), '90');
+    // spaced two-character forms, not only the glued token
+    expect(one('10 除 以 2'), '5');
+    expect(one('10除去2'), '5');
+    expect(one('5 加 上 3'), '8');
+    expect(one('10 減 去 4'), '6');
+    expect(one('10 减 去 4'), '6');
+    expect(one('30 乘 以 3'), '90');
+    expect(one('100加10%'), '110');
+    expect(one('100減10%'), '90');
+    expect(one('100除10%'), '1,000');
+  });
+
+  test('chinese percent wording and fullwidth glyphs', () {
+    expect(one('5%的200'), '10');
+    expect(one('200的5%'), '10');
+    expect(one('百分之5'), '5%');
+    expect(one('200的百分之5'), '10');
+    expect(one('百分之5的200'), '10');
+    expect(one('20是80的百分之幾'), '25%');
+    expect(one('20係80嘅百分之几'), '25%');
+    expect(one('5%的幾多是150'), '3,000');
+    expect(one('百分之5的幾是150'), '3,000');
+    expect(one(r'HK$200的5%'), r'HK$10.00');
+    expect(one('５＋３'), '8');
+    expect(one('（2＋3）＊4'), '20');
+    expect(one('3。14'), '3.14');
+    expect(one('1，000＋1'), '1,001');
+    expect(one('租金＝2500'), '2,500');
+    expect(one('午餐：120'), '120');
+  });
+
+  test('percent of money, unary minus, roots', () {
+    expect(one(r'5% of $200'), r'$10.00');
+    expect(one(r'100/10%'), '1,000');
+    expect(one(r'$200 / 10%'), r'$2,000.00');
+    expect(one('10% of 50%'), '5%');
+    expect(one('10% / 2'), '0.05');
+    expect(one('-10%'), '-10%');
+    expect(one('100 + -10%'), '90');
+    expect(one('2--3'), '5');
+    // exponent binds tighter than unary minus, same as written maths
+    expect(one('-2^2'), '-4');
+    expect(one('2^-2'), '0.25');
+    // multiply still binds before the "100 - 10%" sugar
+    expect(one('100 - 10% * 2'), '99.8');
+    expect(one('cbrt(-8)'), '-2');
+    expect(one('root(8, 3)'), '2');
+    expect(one('5 kg + 2 m'), isNull);
+    expect(one('5 kg - 1 lb'), startsWith('4.546'));
+    expect(one('today − 2 weeks'), '16 October 2026');
   });
 
   test('operator precedence, including the x sign with no spaces', () {

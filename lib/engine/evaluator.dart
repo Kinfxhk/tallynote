@@ -59,6 +59,9 @@ class Evaluator {
         if (v is MoneyValue && op == '-') {
           return MoneyValue(-v.value, v.currency);
         }
+        if (v is PercentValue && op == '-') {
+          return PercentValue(-v.ratio);
+        }
         return const ErrorValue('bad unary');
       case BinNode(:final op, :final left, :final right):
         return _binary(op, eval(left), eval(right));
@@ -67,16 +70,7 @@ class Evaluator {
       case ConvertNode(:final value, :final unit):
         return _convert(eval(value), unit);
       case PercentOfNode(:final percent, :final of):
-        final p = eval(percent);
-        final o = eval(of);
-        if (p is NumValue && o is NumValue) {
-          final r = NumValue(p.value / 100 * o.value, o.unit);
-          return r;
-        }
-        if (p is PercentValue && o is NumValue) {
-          return NumValue(p.ratio * o.value, o.unit);
-        }
-        return const ErrorValue('bad percent of');
+        return _percentOf(eval(percent), eval(of));
     }
   }
 
@@ -147,6 +141,16 @@ class Evaluator {
     }
 
     if (op == '/') {
+      if (r is PercentValue) {
+        if (r.ratio == 0) return const ErrorValue('divide by zero');
+        if (l is NumValue) return NumValue(l.value / r.ratio, l.unit);
+        if (l is MoneyValue) return MoneyValue(l.value / r.ratio, l.currency);
+        if (l is PercentValue) return NumValue(l.ratio / r.ratio);
+      }
+      if (l is PercentValue && r is NumValue) {
+        if (r.value == 0) return const ErrorValue('divide by zero');
+        return NumValue(l.ratio / r.value);
+      }
       if (l is NumValue && r is NumValue) {
         if (r.value == 0) return const ErrorValue('divide by zero');
         final unit = _divUnit(l.unit, r.unit);
@@ -326,9 +330,22 @@ class Evaluator {
             : NumValue(math.sqrt(v));
       case 'cbrt':
         final v = n(0);
-        return v == null
-            ? const ErrorValue('cbrt needs a number')
-            : NumValue(math.pow(v, 1 / 3).toDouble());
+        if (v == null) return const ErrorValue('cbrt needs a number');
+        return NumValue(_signedRoot(v, 3));
+      case 'root':
+        final v = n(0);
+        final degree = n(1) ?? 2;
+        if (v == null || degree == 0) {
+          return const ErrorValue('root needs a number');
+        }
+        if (v < 0 &&
+            degree.roundToDouble() == degree &&
+            degree.round().isEven) {
+          return const ErrorValue('root needs a number');
+        }
+        final out = _signedRoot(v, degree);
+        if (out.isNaN) return const ErrorValue('root needs a number');
+        return NumValue(out);
       case 'abs':
         final v = n(0);
         return v == null
@@ -400,6 +417,42 @@ class Evaluator {
       default:
         return ErrorValue('unknown function $name');
     }
+  }
+
+  /// `5% of $200`, `10% of 50%`, and `5% of 3 kg`.
+  Value _percentOf(Value part, Value whole) {
+    final ratio = switch (part) {
+      NumValue(:final value) => value / 100,
+      PercentValue(:final ratio) => ratio,
+      MoneyValue() ||
+      DateValue() ||
+      DurationValue() ||
+      BoolValue() ||
+      ListValue() ||
+      ErrorValue() => null,
+    };
+    if (ratio == null) return const ErrorValue('bad percent of');
+    return switch (whole) {
+      NumValue(:final value, :final unit) => NumValue(ratio * value, unit),
+      MoneyValue(:final value, :final currency) => MoneyValue(
+        ratio * value,
+        currency,
+      ),
+      PercentValue(ratio: final base) => PercentValue(ratio * base),
+      DateValue() ||
+      DurationValue() ||
+      BoolValue() ||
+      ListValue() ||
+      ErrorValue() => const ErrorValue('bad percent of'),
+    };
+  }
+
+  /// Odd roots of a negative stay negative. `pow` itself returns NaN for that.
+  double _signedRoot(double value, double degree) {
+    final mag = math.pow(value.abs(), 1 / degree).toDouble();
+    final neg =
+        value < 0 && degree.roundToDouble() == degree && degree.round().isOdd;
+    return _round(neg ? -mag : mag);
   }
 }
 
