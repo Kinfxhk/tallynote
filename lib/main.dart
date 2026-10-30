@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'data/document.dart';
 import 'data/rates.dart';
 import 'engine/engine.dart';
+import 'engine/values.dart';
 import 'ui/editor_view.dart';
 import 'ui/feedback.dart';
 import 'ui/folding.dart';
@@ -33,7 +34,7 @@ class TallynoteApp extends StatefulWidget {
   State<TallynoteApp> createState() => _AppState();
 }
 
-class _AppState extends State<TallynoteApp> {
+class _AppState extends State<TallynoteApp> with WidgetsBindingObserver {
   final _store = DocumentStore();
   final _controller = MarkedController(dark: false);
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -86,15 +87,27 @@ class _AppState extends State<TallynoteApp> {
   bool _signColours = true;
   String _posName = ''; // empty = the built-in paper-and-ink colours
   String _negName = '';
+  String _numPreset = 'us';
+  String _yen = 'JPY';
   bool _syncing = false;
   Timer? _saveTimer;
+  Timer? _savedFlashTimer;
   String? _boundSheetId;
+
+  /// Debounce is bound to the sheet that was edited, and to the text that
+  /// sheet had then. The timer must not read the controller later: a switch
+  /// within 400ms would store the new sheet under the old id.
+  String? _pendingSheetId;
+  String? _pendingContent;
+  bool _binding = false;
+  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     HardwareKeyboard.instance.addHandler(_onKey);
-    _engine = SheetEngine(rates: Rates.current);
+    _engine = _makeEngine();
     _controller.addListener(_onText);
     unawaited(_boot());
   }
@@ -113,6 +126,8 @@ class _AppState extends State<TallynoteApp> {
     _signColours = prefs.getBool('tallynote.signColours') ?? true;
     _posName = prefs.getString('tallynote.posColour') ?? '';
     _negName = prefs.getString('tallynote.negColour') ?? '';
+    _numPreset = prefs.getString('tallynote.numFormat') ?? 'us';
+    _yen = prefs.getString('tallynote.yen') ?? 'JPY';
 
     await _store.load();
     _store.addListener(_onStore);
@@ -120,7 +135,7 @@ class _AppState extends State<TallynoteApp> {
     await Rates.load(allowNetwork: _autoRates);
     if (!mounted) return;
     setState(() {
-      _engine = SheetEngine(rates: Rates.current);
+      _engine = _makeEngine();
       _recalc();
     });
   }
@@ -189,8 +204,15 @@ class _AppState extends State<TallynoteApp> {
   }
 
   void _bindSheet() {
+    if (_binding) return;
+    _binding = true;
+    // Write the outgoing sheet before the controller is replaced.
+    _flushPendingSave();
     final sheet = _store.active;
-    if (sheet == null) return;
+    if (sheet == null) {
+      _binding = false;
+      return;
+    }
     _boundSheetId = sheet.id;
     _syncing = true;
     _foldSource = null;
@@ -198,37 +220,58 @@ class _AppState extends State<TallynoteApp> {
     _lineMap = const [];
     _controller.text = sheet.content;
     _syncing = false;
+    _binding = false;
     _recalc();
   }
+
+  /// Full document. A folded editor shows a projection; that must never be
+  /// what gets stored, or the hidden lines are gone on the next open.
+  String _contentToSave() =>
+      _foldSource != null ? _foldSource!.join('\n') : _controller.text;
 
   void _onText() {
     _recalc();
     if (_syncing) return;
-    final id = _store.activeId;
+    final id = _boundSheetId ?? _store.activeId;
     if (id == null) return;
     if (!_dirty) setState(() => _dirty = true);
+    _pendingSheetId = id;
+    _pendingContent = _contentToSave();
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 400), () {
-      final firstLine = _controller.text
-          .split('\n')
-          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
-          .replaceAll(RegExp(r'^#\s*'), '')
-          .trim();
-      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
-      _store.update(
-        id,
-        content: _controller.text,
-        title: sheet?.customTitle == true
-            ? null
-            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
-      );
-      if (mounted) {
-        setState(() {
-          _dirty = false;
-          _lastSaved = DateTime.now();
-        });
-      }
-    });
+    _saveTimer = Timer(const Duration(milliseconds: 400), _flushPendingSave);
+  }
+
+  void _flushPendingSave() {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    final id = _pendingSheetId;
+    final content = _pendingContent;
+    _pendingSheetId = null;
+    _pendingContent = null;
+    if (id == null || content == null) return;
+    _writeSheet(id, content);
+    _dirty = false;
+    _lastSaved = DateTime.now();
+    // dispose still reports mounted, and the store notification must not
+    // schedule a rebuild while the element is being unmounted.
+    if (_closing || !mounted) return;
+    setState(() {});
+  }
+
+  void _writeSheet(String id, String content) {
+    final firstLine = content
+        .split('\n')
+        .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
+        .replaceAll(RegExp(r'^#\s*'), '')
+        .trim();
+    final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
+    _store.update(
+      id,
+      content: content,
+      title: sheet?.customTitle == true
+          ? null
+          : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
+    );
   }
 
   /// Dropping an answer appends a live reference; the engine keeps it fresh.
@@ -243,31 +286,21 @@ class _AppState extends State<TallynoteApp> {
     );
   }
 
-  /// Ctrl/Cmd+S: write now instead of waiting for the debounce.
+  /// Ctrl/Cmd+S, and any path that must not wait out the debounce.
   void _saveNow() {
-    _saveTimer?.cancel();
-    final id = _store.activeId;
+    final id = _boundSheetId ?? _store.activeId;
     if (id != null) {
-      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
-      final firstLine = _controller.text
-          .split('\n')
-          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
-          .replaceAll(RegExp(r'^#\s*'), '')
-          .trim();
-      _store.update(
-        id,
-        content: _controller.text,
-        title: sheet?.customTitle == true
-            ? null
-            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
-      );
+      _pendingSheetId = id;
+      _pendingContent = _contentToSave();
     }
+    _flushPendingSave();
     setState(() {
       _lastSaved = DateTime.now();
       _dirty = false;
       _savedFlash = true;
     });
-    Timer(const Duration(milliseconds: 1200), () {
+    _savedFlashTimer?.cancel();
+    _savedFlashTimer = Timer(const Duration(milliseconds: 1200), () {
       if (mounted) setState(() => _savedFlash = false);
     });
   }
@@ -290,10 +323,29 @@ class _AppState extends State<TallynoteApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        return;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _flushPendingSave();
+    }
+  }
+
+  @override
   void dispose() {
+    _closing = true;
+    _savedFlashTimer?.cancel();
+    _zoomHudTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKey);
+    _store.removeListener(_onStore);
+    _controller.removeListener(_onText);
+    _flushPendingSave();
     _zoomModifier.dispose();
-    _saveTimer?.cancel();
     _controller.dispose();
     _store.dispose();
     super.dispose();
@@ -315,7 +367,14 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.signColours', _signColours);
     await prefs.setString('tallynote.posColour', _posName);
     await prefs.setString('tallynote.negColour', _negName);
+    await prefs.setString('tallynote.numFormat', _numPreset);
+    await prefs.setString('tallynote.yen', _yen);
   }
+
+  NumberFormat get _numberFormat => NumberFormat.fromPrefs(_numPreset, _yen);
+
+  SheetEngine _makeEngine() =>
+      SheetEngine(rates: Rates.current, format: _numberFormat);
 
   String get _effectiveLocale {
     final chosen = _locale;
@@ -570,8 +629,26 @@ class _AppState extends State<TallynoteApp> {
                               showTabs: _showTabs,
                               uiScale: _uiScale,
                               locale: _locale ?? _effectiveLocale,
+                              numPreset: _numPreset,
+                              yen: _yen,
                               onLocale: (v) {
                                 setState(() => _locale = v);
+                                _saveSettings();
+                              },
+                              onNumPreset: (v) {
+                                setState(() {
+                                  _numPreset = v;
+                                  _engine = _makeEngine();
+                                  _recalc();
+                                });
+                                _saveSettings();
+                              },
+                              onYen: (v) {
+                                setState(() {
+                                  _yen = v;
+                                  _engine = _makeEngine();
+                                  _recalc();
+                                });
                                 _saveSettings();
                               },
                               posName: _posName,
@@ -620,7 +697,7 @@ class _AppState extends State<TallynoteApp> {
                                 final ok = await Rates.refresh();
                                 if (!mounted) return false;
                                 setState(() {
-                                  _engine = SheetEngine(rates: Rates.current);
+                                  _engine = _makeEngine();
                                   _recalc();
                                 });
                                 return ok;
@@ -672,6 +749,7 @@ class _AppState extends State<TallynoteApp> {
                                     negativeColour: _negName.isEmpty
                                         ? null
                                         : Fmt.colours[_negName],
+                                    numberFormat: _numberFormat,
                                     onAnswerWidth: (w) {
                                       setState(() => _answerW = w);
                                       _saveSettings();
@@ -765,6 +843,7 @@ class _AppState extends State<TallynoteApp> {
                             dirty: _dirty,
                             justSaved: _savedFlash,
                             savedAt: _lastSaved,
+                            libraryUnreadable: _store.libraryUnreadable,
                             lines: _controller.text.split('\n').length,
                             answers: _results
                                 .where((r) => r.display != null)
@@ -862,6 +941,7 @@ class _StatusBar extends StatelessWidget {
   final bool dirty;
   final bool justSaved;
   final DateTime? savedAt;
+  final bool libraryUnreadable;
 
   const _StatusBar({
     required this.dark,
@@ -870,6 +950,7 @@ class _StatusBar extends StatelessWidget {
     required this.dirty,
     required this.justSaved,
     required this.savedAt,
+    required this.libraryUnreadable,
   });
 
   /// "editing…" while the debounce is pending, else the last save time.
@@ -905,17 +986,28 @@ class _StatusBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Flexible(
-            child: Text(
-              T.format(locale, 'linesAnswers', {
-                'lines': '$lines',
-                'answers': '$answers',
-              }),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+          if (libraryUnreadable)
+            Expanded(
+              child: Text(
+                T.of(locale, 'libraryUnreadable'),
+                key: const ValueKey('library-unreadable'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: Palette.negative(dark)),
+              ),
+            )
+          else
+            Flexible(
+              child: Text(
+                T.format(locale, 'linesAnswers', {
+                  'lines': '$lines',
+                  'answers': '$answers',
+                }),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+              ),
             ),
-          ),
           const SizedBox(width: 12),
           if (_saveLabelFor(locale).isNotEmpty) ...[
             Text(

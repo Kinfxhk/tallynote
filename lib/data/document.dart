@@ -64,10 +64,24 @@ class DocumentStore extends ChangeNotifier {
   static const _key = 'tallynote.sheets.v1';
   static const _activeKey = 'tallynote.active.v1';
 
+  static const backupKey = 'tallynote.sheets.v1.bak';
+
   final List<Sheet> sheets = [];
   final List<Folder> folders = [];
   String? activeId;
   bool loaded = false;
+
+  /// The on-disk library could not be parsed. A copy is kept under [backupKey]
+  /// when that write succeeds; until then new saves are refused so a blank
+  /// library cannot replace the unreadable one.
+  bool libraryUnreadable = false;
+  bool _protectCorrupt = false;
+
+  /// Test hook. `SharedPreferences.setString` reports failure as `false`
+  /// rather than a throw; production passes that result through.
+  @visibleForTesting
+  static Future<bool> Function(SharedPreferences prefs, String raw)?
+  debugKeepBackup;
 
   Sheet? get active =>
       sheets.where((s) => s.id == activeId).firstOrNull ??
@@ -134,8 +148,13 @@ class DocumentStore extends ChangeNotifier {
               ),
             );
         }
-      } catch (_) {
-        // corrupt store: start clean rather than crash
+      } catch (e, st) {
+        debugPrint('Tallynote: sheet library could not be read ($e)\n$st');
+        libraryUnreadable = true;
+        final kept = await _keepBackup(prefs, raw);
+        // Only a successful backup may be followed by a fresh library.
+        // Otherwise the next save would erase the only copy.
+        _protectCorrupt = !kept;
       }
     }
     if (sheets.isEmpty) {
@@ -152,7 +171,25 @@ class DocumentStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> _keepBackup(SharedPreferences prefs, String raw) async {
+    try {
+      final hook = debugKeepBackup;
+      if (hook != null) return await hook(prefs, raw);
+      return await prefs.setString(backupKey, raw);
+    } catch (e, st) {
+      debugPrint('Tallynote: could not keep a backup of the library ($e)\n$st');
+      return false;
+    }
+  }
+
   Future<void> _persist() async {
+    if (_protectCorrupt) {
+      debugPrint(
+        'Tallynote: not saving; the on-disk library could not be read '
+        'and a backup was not written.',
+      );
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _key,

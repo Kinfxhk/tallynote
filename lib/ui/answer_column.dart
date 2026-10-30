@@ -17,40 +17,54 @@ class AnswerParts {
   final String? fraction;
   final String suffix;
 
+  /// The decimal mark this number was written with (`.` or `,`).
+  final String decimalMark;
+
   const AnswerParts({
     required this.raw,
     required this.aligns,
     this.head = '',
     this.fraction,
     this.suffix = '',
+    this.decimalMark = '.',
   });
 
-  /// Dot, fraction digits, and a suffix that belongs to a fractional value
-  /// (`%`, ` kg`). Glued together so the suffix sits on the last digit.
-  String get fractionTail => fraction == null ? '' : '.$fraction$suffix';
-
-  static final _number = RegExp(r'\d[\d,]*(?:\.\d+)?');
+  /// Decimal mark, fraction digits, and a suffix that belongs to a fractional
+  /// value (`%`, ` kg`). Glued together so the suffix sits on the last digit.
+  String get fractionTail =>
+      fraction == null ? '' : '$decimalMark$fraction$suffix';
 
   /// A single number, optionally with a sign or currency in front and a
   /// unit or `%` after. Dates, lists, and scientific notation have more
   /// than one number, so they stay a single right-aligned run.
-  factory AnswerParts.parse(String display) {
-    final matches = _number.allMatches(display).toList();
+  ///
+  /// [decimal] and [group] follow the sheet's number format so `1.234,56`
+  /// still shares a decimal column.
+  factory AnswerParts.parse(
+    String display, {
+    String decimal = '.',
+    String group = ',',
+  }) {
+    final dec = RegExp.escape(decimal);
+    final body = group.isEmpty ? '\\d+' : '\\d(?:\\d|${RegExp.escape(group)})*';
+    final number = RegExp('$body(?:$dec\\d+)?');
+    final matches = number.allMatches(display).toList();
     if (matches.length != 1) {
-      return AnswerParts(raw: display, aligns: false);
+      return AnswerParts(raw: display, aligns: false, decimalMark: decimal);
     }
     final m = matches.first;
     final token = m.group(0)!;
     final before = display.substring(0, m.start);
     final after = display.substring(m.end);
-    final dot = token.indexOf('.');
+    final dot = token.indexOf(decimal);
     if (dot >= 0) {
       return AnswerParts(
         raw: display,
         aligns: true,
         head: before + token.substring(0, dot),
-        fraction: token.substring(dot + 1),
+        fraction: token.substring(dot + decimal.length),
         suffix: after,
+        decimalMark: decimal,
       );
     }
     return AnswerParts(
@@ -58,6 +72,7 @@ class AnswerParts {
       aligns: true,
       head: before + token,
       suffix: after,
+      decimalMark: decimal,
     );
   }
 }
@@ -88,9 +103,13 @@ class AnswerColumnMetrics {
 
 AnswerColumnMetrics measureAnswers(
   Iterable<String> displays,
-  double Function(String text) measure,
-) {
-  final parts = displays.map(AnswerParts.parse).toList();
+  double Function(String text) measure, {
+  String decimal = '.',
+  String group = ',',
+}) {
+  final parts = displays
+      .map((d) => AnswerParts.parse(d, decimal: decimal, group: group))
+      .toList();
   final cache = <String, double>{};
   double width(String text) => cache.putIfAbsent(text, () => measure(text));
 
@@ -100,7 +119,7 @@ AnswerColumnMetrics measureAnswers(
     if (!p.aligns) continue;
     headW = math.max(headW, width(p.head));
     if (p.fraction != null) {
-      fracW = math.max(fracW, width('.${p.fraction}'));
+      fracW = math.max(fracW, width('${p.decimalMark}${p.fraction}'));
     }
   }
 
@@ -145,17 +164,21 @@ class AnswerReadout extends StatelessWidget {
   final String display;
   final TextStyle style;
   final AnswerColumnMetrics metrics;
+  final String decimal;
+  final String group;
 
   const AnswerReadout({
     super.key,
     required this.display,
     required this.style,
     required this.metrics,
+    this.decimal = '.',
+    this.group = ',',
   });
 
   @override
   Widget build(BuildContext context) {
-    final parts = AnswerParts.parse(display);
+    final parts = AnswerParts.parse(display, decimal: decimal, group: group);
     return Semantics(
       label: display,
       container: true,

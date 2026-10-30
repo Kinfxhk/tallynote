@@ -119,8 +119,10 @@ class Evaluator {
 
     if (op == '*') {
       if (l is NumValue && r is NumValue) {
-        final unit = _mulUnit(l.unit, r.unit);
-        return NumValue(l.value * r.value, unit);
+        return _scaled(l.value * r.value, _mulUnit(l.unit, r.unit), [
+          if (l.unit != null) l.unit!,
+          if (r.unit != null) r.unit!,
+        ]);
       }
       if (l is MoneyValue && r is NumValue) {
         return MoneyValue(l.value * r.value, l.currency);
@@ -153,8 +155,10 @@ class Evaluator {
       }
       if (l is NumValue && r is NumValue) {
         if (r.value == 0) return const ErrorValue('divide by zero');
-        final unit = _divUnit(l.unit, r.unit);
-        return NumValue(l.value / r.value, unit);
+        return _scaled(l.value / r.value, _divUnit(l.unit, r.unit), [
+          if (l.unit != null) l.unit!,
+          if (r.unit != null) r.unit!,
+        ]);
       }
       if (l is MoneyValue && r is NumValue) {
         if (r.value == 0) return const ErrorValue('divide by zero');
@@ -237,6 +241,12 @@ class Evaluator {
       return v.value * v.unit!.factor;
     }
     return null;
+  }
+
+  NumValue _scaled(double value, Unit? unit, List<Unit> hints) {
+    if (unit == null) return NumValue(value);
+    final (v, u) = ctx.units.ideal(value, unit, hints);
+    return NumValue(v, u);
   }
 
   Unit? _mulUnit(Unit? a, Unit? b) {

@@ -12,6 +12,11 @@ class LineResult {
   final Value? value;
   final String? display;
   final String? error;
+
+  /// True only for a real [ErrorValue] (divide by zero, mixed units).
+  /// Parse failures and unfinished lines stay blank: a wrong number is worse
+  /// than no number, and a half-typed line is not an error yet.
+  final bool engineError;
   final bool isComment;
   final bool isHeading;
   final String? tag;
@@ -21,6 +26,7 @@ class LineResult {
     this.value,
     this.display,
     this.error,
+    this.engineError = false,
     this.isComment = false,
     this.isHeading = false,
     this.tag,
@@ -57,6 +63,7 @@ class SheetEngine {
   final bool strict;
   Map<String, double> rates;
   final String baseCurrency;
+  final NumberFormat format;
 
   SheetEngine({
     UnitRegistry? units,
@@ -64,6 +71,7 @@ class SheetEngine {
     Map<String, double>? rates,
     this.strict = false,
     this.baseCurrency = 'HKD',
+    this.format = NumberFormat.us,
   }) : units = units ?? UnitRegistry(),
        dates = DateParser(now: now),
        rates = rates ?? const {'USD': 1, 'HKD': 7.8};
@@ -85,10 +93,10 @@ class SheetEngine {
       switch (n) {
         case NumberNode(:final value, :final unit):
           return unit == null
-              ? formatNumber(value)
-              : '${formatNumber(value)} ${unit.id}';
+              ? formatNumber(value, format: format)
+              : '${formatNumber(value, format: format)} ${unit.id}';
         case MoneyNode(:final value, :final currency):
-          return '${formatNumber(value)} $currency';
+          return '${formatNumber(value, format: format)} $currency';
         case VarNode(:final name):
           return name;
         case PercentNode(:final operand):
@@ -124,7 +132,7 @@ class SheetEngine {
     Node? node;
     for (final candidate in _candidates(body).take(8)) {
       try {
-        node = Parser.parseExpression(candidate, units);
+        node = Parser.parseExpression(candidate, units, format: format);
         break;
       } catch (_) {}
     }
@@ -133,7 +141,7 @@ class SheetEngine {
     return steps.length >= 2 ? steps : const [];
   }
 
-  String _compact(Value v) => formatValue(v);
+  String _compact(Value v) => formatValue(v, format: format);
 
   /// Two passes: the first collects values per tag so `total of #tag` can be
   /// answered on lines that appear above some of the tagged lines.
@@ -224,8 +232,11 @@ class SheetEngine {
           LineResult(
             text: raw,
             value: bad ? null : value,
-            display: value == null || bad ? null : formatValue(value),
+            display: value == null || bad
+                ? null
+                : formatValue(value, format: format),
             error: bad ? value.message : null,
+            engineError: bad,
             tag: tag,
           ),
         );
@@ -241,7 +252,9 @@ class SheetEngine {
           LineResult(
             text: raw,
             value: fallback,
-            display: fallback == null ? null : formatValue(fallback),
+            display: fallback == null
+                ? null
+                : formatValue(fallback, format: format),
             tag: tag,
           ),
         );
@@ -256,7 +269,11 @@ class SheetEngine {
           LineResult(
             text: raw,
             value: fallback,
-            display: fallback == null ? null : formatValue(fallback),
+            display: fallback == null
+                ? null
+                : formatValue(fallback, format: format),
+            // A parse error on an unfinished line stays blank in the column.
+            // The message is kept for the CLI; [engineError] stays false.
             error: fallback == null ? e.toString() : null,
             tag: tag,
           ),
@@ -678,7 +695,7 @@ class SheetEngine {
         : _candidates(expanded).take(8).toList();
     for (final candidate in candidates) {
       try {
-        final node = Parser.parseExpression(candidate, units);
+        final node = Parser.parseExpression(candidate, units, format: format);
         return Evaluator(ctx).eval(node);
       } catch (e) {
         lastError = e;
@@ -900,12 +917,17 @@ class SheetEngine {
     return const ErrorValue('unknown aggregate');
   }
 
+  /// One number the way the lexer would read it. A grouping mark that is not
+  /// exactly three digits (`1,23` in US, `1.23` in EU) is not rewritten into
+  /// a different integer.
   Value? _loneNumber(String s) {
-    final m = RegExp(r'-?\d[\d,]*(?:\.\d+)?').allMatches(s).toList();
-    if (m.length == 1) {
-      final v = double.tryParse(m.first.group(0)!.replaceAll(',', ''));
-      if (v != null) return NumValue(v);
-    }
-    return null;
+    final numbers = Lexer(
+      s,
+      format: format,
+    ).tokenize().where((t) => t.type == TokType.number).toList();
+    if (numbers.length != 1) return null;
+    final v = numbers.single.num;
+    if (v == null) return null;
+    return NumValue(v);
   }
 }

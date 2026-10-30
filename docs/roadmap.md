@@ -32,13 +32,13 @@ out-feature Soulver on live data; out-ship it on the surfaces it refuses.
 2. **Totals are a trust feature.** Soulver explicitly had to make totals ignore
    variables and references — the same trap we already avoid. Adding an explicit
    `subtotal` line is the missing half.
-3. **Locale is the number-one silent-wrong-answer source.** Measured today:
-   `1.003.020` fails to parse (safe), but `9,875` is always read as nine thousand
-   eight hundred seventy-five — in a comma-decimal locale that is 9.875. Soulver
-   had the mirror-image bug and spent years patching it.
+3. **Locale is the number-one silent-wrong-answer source.** `9,875` used to
+   always mean nine thousand eight hundred seventy-five. Settings → Editor now
+   has a US / EU preset (`1,234.56` vs `1.234,56`) and a ¥ = JPY / CNY switch.
+   The default stays US-style so existing sheets do not change.
 4. **Answer phrasing sells the engine.** `0.75 mi` vs `1,207 m` decides whether the
-   app feels smart. Measured today: `3 min * 15 mph` answers `45 min·mph` — a unit
-   nobody asked for. Soulver shipped a fix for exactly this shape.
+   app feels smart. `3 min * 15 mph` now answers `0.75 mi`, and `10 m / 2 s`
+   answers `5 m/s`, instead of a compound unit id.
 5. **Quick capture beats any new syntax.** Everything else is a feature you use
    once; a global hotkey is used hourly.
 6. **Note management is the long game.** Thousands of short notes need search,
@@ -52,8 +52,8 @@ out-feature Soulver on live data; out-ship it on the surfaces it refuses.
 |---|---|---|
 | Tap an answer → insert its reference (`line 4`) | Soulver's ⌘L reference mode; our `line N` exists but nothing inserts it | S |
 | `subtotal` line keyword | Soulver's subtotal semantics; we have `sum` per section but no run-on subtotal | S |
-| Number format settings (decimal separator, thousands, ¥ = JPY/CNY, money dp) | The exact class of bug both apps kept fixing | M |
-| Unit "ideal form": multiply rates → the natural unit (`3 min × 15 mph` currently answers `45 min·mph`) | Soulver shipped a fix for exactly this | M |
+| Number format settings (decimal separator, thousands, ¥ = JPY/CNY) | Shipped in Settings → Editor. Default remains US / ¥ = JPY | M |
+| Unit "ideal form": multiply rates → the natural unit (`3 min * 15 mph` → `0.75 mi`) | Shipped for time×speed and length÷time | M |
 | Variable autocomplete (typing `ren` suggests `rent`) | Soulver's escape-to-complete; our variables are invisible to the user otherwise | M |
 
 ### P1 — the ones that change daily use
@@ -61,7 +61,7 @@ out-feature Soulver on live data; out-ship it on the surfaces it refuses.
 | Feature | Why | Effort |
 |---|---|---|
 | Quick capture: global hotkey on desktop, Android share-target / text-selection intent | QuickSoulver is Soulver's most-used feature | M |
-| Sheet search + folders + delete-with-undo | Soulver 3's headline work; we have neither search nor folders | M |
+| Sheet search + folders + delete-with-undo | Search and folders are in the sidebar; delete-with-undo is still open | M |
 | Scrubbable numbers (drag a number to see answers move) | Signature Soulver interaction, no engine work | M |
 | Workdays (`today + 3 workdays`) and timecode (`01:02:03 + 01:09:54`) | Cheap, concrete, already half-supported | S |
 | Export Markdown / CSV / print | Soulver exports PDF/HTML; ours is a text tool that cannot leave the app | M |

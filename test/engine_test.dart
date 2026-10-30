@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tallynote/engine/engine.dart';
+import 'package:tallynote/engine/values.dart';
 
 /// Golden cases mirrored from a real Soulver 4.0.4 run, plus Numi-only cases.
 void main() {
@@ -15,6 +16,62 @@ void main() {
     expect(one('(2.5+7.5)*1.11/10-15^2'), '-223.89');
     expect(one('2+3*4'), '14');
     expect(one('2(3+4)'), '14');
+  });
+
+  test('unit products pick a natural unit', () {
+    expect(one('3 min * 15 mph'), '0.75 mi');
+    expect(one('2 h * 100 km/h'), '200 km');
+    expect(one('10 m / 2 s'), '5 m/s');
+    expect(one('30 km / 0.5 h'), '60 km/h');
+    expect(one('1 h * 10 knot'), '10 nmi');
+  });
+
+  test('number format and the yen sign', () {
+    final eu = SheetEngine(format: NumberFormat.eu);
+    final euSum = eu.evaluate(['9,875+1']).first;
+    expect((euSum.value as NumValue).value, closeTo(10.875, 1e-9));
+    expect(euSum.display, '10,875');
+    expect(
+      (eu.evaluate(['1.234,56']).first.value as NumValue).value,
+      closeTo(1234.56, 1e-9),
+    );
+
+    expect(one('9,875'), '9,875');
+    expect((engine.evaluate(['9,875']).first.value as NumValue).value, 9875);
+
+    // A comma inside a call stays an argument separator in EU format.
+    expect(eu.evaluate(['min(1,2)']).first.display, '1');
+    expect(eu.evaluate(['pow(2,8)']).first.display, '256');
+    expect(eu.evaluate(['root(8,3)']).first.display, '2');
+    // Grouping parentheses still use the decimal comma.
+    expect(
+      (eu.evaluate(['(1,5)']).first.value as NumValue).value,
+      closeTo(1.5, 1e-9),
+    );
+    expect(
+      (eu.evaluate(['(1,5)+2']).first.value as NumValue).value,
+      closeTo(3.5, 1e-9),
+    );
+    expect(
+      (eu.evaluate(['1,5']).first.value as NumValue).value,
+      closeTo(1.5, 1e-9),
+    );
+    // An unfinished line falls back to the one number, still in EU format.
+    final half = eu.evaluate(['1,5 +']).first;
+    expect(half.engineError, isFalse);
+    expect((half.value as NumValue).value, closeTo(1.5, 1e-9));
+    expect(half.display, '1,5');
+    // A grouped number the lexer rejects must not become a different integer.
+    expect(engine.evaluate(['1,23 +']).first.display, isNull);
+    expect(eu.evaluate(['1.23 +']).first.display, isNull);
+    expect((engine.evaluate(['1,234 +']).first.value as NumValue).value, 1234);
+
+    final cny = SheetEngine(format: NumberFormat.us.withYen('CNY'));
+    final yuan = cny.evaluate(['¥100']).first;
+    expect(yuan.value, isA<MoneyValue>());
+    expect((yuan.value as MoneyValue).currency, 'CNY');
+    expect(yuan.display, '¥100.00');
+    expect(one('¥100'), '¥100');
   });
 
   test('units', () {
@@ -186,6 +243,17 @@ void main() {
     expect(one('cbrt(-8)'), '-2');
     expect(one('root(8, 3)'), '2');
     expect(one('5 kg + 2 m'), isNull);
+    final mixed = engine.evaluate(['5 kg + 2 m']).first;
+    expect(mixed.engineError, isTrue);
+    expect(mixed.error, 'incompatible values');
+    final div0 = engine.evaluate(['1/0']).first;
+    expect(div0.display, isNull);
+    expect(div0.engineError, isTrue);
+    expect(div0.error, 'divide by zero');
+    // an unfinished line is not an engine error — the column stays blank
+    final half = engine.evaluate(['2+']).first;
+    expect(half.engineError, isFalse);
+    expect(half.error, isNull);
     expect(one('5 kg - 1 lb'), startsWith('4.546'));
     expect(one('today − 2 weeks'), '16 October 2026');
   });

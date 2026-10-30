@@ -429,6 +429,6 @@ void main() {
     // Appearance: dark mode, answers, sign colours
     await tester.tap(find.byType(Switch).at(1));
     await tester.pumpAndSettle();
-    expect(find.textContaining('14'), findsNothing);
+    expect(find.text('14'), findsNothing);
   });
 }
