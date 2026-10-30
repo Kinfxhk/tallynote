@@ -85,6 +85,13 @@ class T {
     'editorHint': 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
     'language': 'Language',
     'languageHint': 'Interface language',
+    'numberFormat': 'Number format',
+    'numberFormatHint': 'US 1,234.56 or EU 1.234,56. A comma-decimal sheet re-reads 9,875 as 9.875.',
+    'yenMeans': '¥ means',
+    'yenMeansHint':
+        'JPY has no cents. CNY keeps them. Existing ¥ lines are re-read.',
+    'libraryUnreadable':
+        'Saved sheets could not be read. A copy was kept; nothing was erased.',
   };
 
   static const _zhHant = <String, String>{
@@ -158,6 +165,11 @@ class T {
     'editorHint': '輸入算式…   例如  rent = 2500  ·  total of #food',
     'language': '語言',
     'languageHint': '介面語言',
+    'numberFormat': '數字格式',
+    'numberFormatHint': '美式 1,234.56 或歐式 1.234,56。逗號小數會把 9,875 讀成 9.875。',
+    'yenMeans': '¥ 代表',
+    'yenMeansHint': '日圓冇小數。人民幣保留分。已有的 ¥ 會重新讀取。',
+    'libraryUnreadable': '讀唔到已儲存的記事。已留低一份副本，冇刪除任何內容。',
   };
 
   static const _zhHans = <String, String>{
@@ -231,6 +243,11 @@ class T {
     'editorHint': '输入算式…   例如  rent = 2500  ·  total of #food',
     'language': '语言',
     'languageHint': '界面语言',
+    'numberFormat': '数字格式',
+    'numberFormatHint': '美式 1,234.56 或欧式 1.234,56。逗号小数会把 9,875 读成 9.875。',
+    'yenMeans': '¥ 代表',
+    'yenMeansHint': '日元没有小数。人民币保留分。已有的 ¥ 会重新读取。',
+    'libraryUnreadable': '读不到已保存的笔记。已留下一份副本，没有删除任何内容。',
   };
 
   static const _all = <String, Map<String, String>>{

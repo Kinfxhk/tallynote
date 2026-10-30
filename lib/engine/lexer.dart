@@ -1,3 +1,5 @@
+import 'values.dart';
+
 enum TokType { number, word, op, lparen, rparen, comma, currency, tag }
 
 class Token {
@@ -77,10 +79,12 @@ String _foldRune(int code, {required bool prevDigit, required bool nextDigit}) {
 
 class Lexer {
   final String src;
+  final NumberFormat format;
   int _i = 0;
   final List<Token> out = [];
 
-  Lexer(String source) : src = normalizeMathSource(source);
+  Lexer(String source, {this.format = NumberFormat.us})
+    : src = normalizeMathSource(source);
 
   List<Token> tokenize() {
     while (_i < src.length) {
@@ -90,7 +94,9 @@ class Lexer {
         continue;
       }
       if (_isDigit(c) ||
-          (c == '.' && _i + 1 < src.length && _isDigit(src[_i + 1]))) {
+          (c == format.decimal &&
+              _i + 1 < src.length &&
+              _isDigit(src[_i + 1]))) {
         _number();
         continue;
       }
@@ -153,9 +159,12 @@ class Lexer {
       final c = src[_i];
       if (_isDigit(c)) {
         _i++;
-      } else if (c == ',' && _i + 3 <= src.length && _digitsAhead(3)) {
-        _i++; // thousands separator
-      } else if (c == '.' &&
+      } else if (format.group.isNotEmpty &&
+          c == format.group &&
+          !sawDot &&
+          _groupAhead()) {
+        _i++; // thousands / grouping separator
+      } else if (c == format.decimal &&
           !sawDot &&
           _i + 1 < src.length &&
           _isDigit(src[_i + 1])) {
@@ -165,7 +174,10 @@ class Lexer {
         break;
       }
     }
-    var value = double.parse(src.substring(start, _i).replaceAll(',', ''));
+    var raw = src.substring(start, _i);
+    if (format.group.isNotEmpty) raw = raw.replaceAll(format.group, '');
+    raw = raw.replaceAll(format.decimal, '.');
+    var value = double.parse(raw);
     // 5k / 1.5k shorthand; "5m" stays metres, "5b" stays bits
     if (_i < src.length && (src[_i] == 'k' || src[_i] == 'K')) {
       final next = _i + 1 < src.length ? src[_i + 1] : ' ';
@@ -183,6 +195,15 @@ class Lexer {
       if (!_isDigit(src[_i + k])) return false;
     }
     return true;
+  }
+
+  /// A grouping mark only counts when it is followed by exactly three digits
+  /// and then a boundary (`1.234` is a thousand, `1.2345` is not).
+  bool _groupAhead() {
+    if (!_digitsAhead(3)) return false;
+    final after = _i + 4;
+    if (after >= src.length) return true;
+    return !_isDigit(src[after]);
   }
 
   static const _funcNames = {

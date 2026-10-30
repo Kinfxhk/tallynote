@@ -25,8 +25,10 @@ void main() {
     expect(T.of('en', 'newSheet'), 'New sheet');
     expect(T.of('zh_Hant', 'newSheet'), '新記事');
     expect(T.of('zh_Hans', 'newSheet'), '新笔记');
-    expect(T.format('zh_Hant', 'linesAnswers', {'lines': '3', 'answers': '2'}),
-        '3 行 · 2 個答案');
+    expect(
+      T.format('zh_Hant', 'linesAnswers', {'lines': '3', 'answers': '2'}),
+      '3 行 · 2 個答案',
+    );
     // unknown keys fall back to the key itself rather than crashing
     expect(T.of('en', 'nope'), 'nope');
   });

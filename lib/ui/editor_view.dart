@@ -2,10 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
-import '../i18n/strings.dart';
 import '../engine/values.dart';
+import '../i18n/strings.dart';
 import 'answer_column.dart';
 import 'feedback.dart';
+import 'marked_controller.dart';
 import 'theme.dart';
 
 /// A single text field with answers aligned to each logical line.
@@ -40,6 +41,10 @@ class EditorView extends StatefulWidget {
   final Color? positiveColour;
   final Color? negativeColour;
 
+  /// Sheet number format. The decimal mark has to match the painted answers
+  /// or the column lines up on the wrong glyph.
+  final NumberFormat numberFormat;
+
   const EditorView({
     super.key,
     required this.controller,
@@ -62,6 +67,7 @@ class EditorView extends StatefulWidget {
     this.wheelBlocked,
     this.positiveColour,
     this.negativeColour,
+    this.numberFormat = NumberFormat.us,
   });
 
   @override
@@ -106,7 +112,12 @@ class _EditorViewState extends State<EditorView> {
       builder: (context, constraints) {
         final text = widget.controller.text;
         final textWidth = constraints.maxWidth - answerW - gutterW - 48;
-        final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
+        final tops = _lineTops(
+          context,
+          text,
+          style,
+          textWidth < 80 ? 80 : textWidth,
+        );
         // Text merges the ambient style at paint time. Measure that same
         // face, or a theme letter-spacing shows up only in the glyphs and
         // the row overflows by a fraction of a character.
@@ -116,6 +127,8 @@ class _EditorViewState extends State<EditorView> {
           widget.results.map((r) => r.display).whereType<String>(),
           (s) =>
               measureAnswerText(s, painted, MediaQuery.textScalerOf(context)),
+          decimal: widget.numberFormat.decimal,
+          group: widget.numberFormat.group,
         );
 
         return DragTarget<int>(
@@ -180,7 +193,34 @@ class _EditorViewState extends State<EditorView> {
                 ),
                 if (widget.answersVisible)
                   for (var i = 0; i < widget.results.length; i++)
-                    if (widget.results[i].display != null)
+                    if (widget.results[i].engineError &&
+                        widget.results[i].error != null)
+                      Positioned(
+                        top: (tops.length > i ? tops[i] : 0),
+                        right: 0,
+                        width: answerW < 80 ? 80 : answerW,
+                        height: 28,
+                        child: Tooltip(
+                          message: widget.results[i].error!,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              widget.results[i].error!,
+                              key: ValueKey('engine-error-$i'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontFamily: monoFamily,
+                                fontSize: 12.5 * widget.scale,
+                                fontStyle: FontStyle.italic,
+                                color: Palette.faint(widget.dark),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (widget.results[i].display != null)
                       Positioned(
                         top: (tops.length > i ? tops[i] : 0),
                         right: 0,
@@ -261,7 +301,13 @@ class _EditorViewState extends State<EditorView> {
       line: r.text,
       canExplain:
           widget.showSteps && widget.explain != null && _hasOperators(r.text),
-      child: AnswerReadout(display: r.display!, style: style, metrics: metrics),
+      child: AnswerReadout(
+        display: r.display!,
+        style: style,
+        metrics: metrics,
+        decimal: widget.numberFormat.decimal,
+        group: widget.numberFormat.group,
+      ),
     );
 
     if (widget.onInsertReference == null) return cell;
@@ -406,29 +452,70 @@ class _EditorViewState extends State<EditorView> {
   );
 
   /// Vertical offset of each logical line, honouring soft wraps.
-  List<double> _lineTops(String text, TextStyle style, double width) {
+  ///
+  /// The field paints markers stripped (`**bold**` is four letters wide, not
+  /// eight). Measuring the raw controller text pushes later answers down.
+  List<double> _lineTops(
+    BuildContext context,
+    String text,
+    TextStyle style,
+    double width,
+  ) {
+    final span = _paintedSpan(context, text, style);
+    // Same strut the TextField forces, so a wrapped line is the same height
+    // in the painter and on screen.
+    const strut = StrutStyle(
+      fontFamily: monoFamily,
+      fontSize: 15,
+      height: 28 / 15,
+      forceStrutHeight: true,
+    );
     final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
+      text: span,
       textDirection: TextDirection.ltr,
-      strutStyle: StrutStyle(
-        fontFamily: monoFamily,
-        fontSize: 15 * widget.scale,
-        height: 28 / 15,
-        forceStrutHeight: true,
-      ),
+      strutStyle: strut,
     )..layout(maxWidth: width);
 
+    final plain = _plainText(span);
     final tops = <double>[];
     var offset = 0;
-    for (final line in text.split('\n')) {
+    for (final line in plain.split('\n')) {
       final caret = painter.getOffsetForCaret(
-        TextPosition(offset: offset),
+        TextPosition(offset: offset.clamp(0, plain.length)),
         Rect.zero,
       );
       tops.add(caret.dy);
       offset += line.length + 1;
     }
     return tops;
+  }
+
+  TextSpan _paintedSpan(BuildContext context, String text, TextStyle style) {
+    final controller = widget.controller;
+    if (controller is MarkedController && controller.text == text) {
+      return controller.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: false,
+      );
+    }
+    return TextSpan(text: text, style: style);
+  }
+
+  String _plainText(InlineSpan span) {
+    final buf = StringBuffer();
+    void walk(InlineSpan s) {
+      if (s is! TextSpan) return;
+      if (s.text != null) buf.write(s.text);
+      final kids = s.children;
+      if (kids == null) return;
+      for (final child in kids) {
+        walk(child);
+      }
+    }
+
+    walk(span);
+    return buf.toString();
   }
 }
 

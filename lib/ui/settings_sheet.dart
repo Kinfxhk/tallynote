@@ -21,7 +21,11 @@ Future<void> showSettingsSheet({
   required bool showTabs,
   required double uiScale,
   required String locale,
+  required String numPreset,
+  required String yen,
   required ValueChanged<String> onLocale,
+  required ValueChanged<String> onNumPreset,
+  required ValueChanged<String> onYen,
   required ValueChanged<bool> onAnswers,
   required ValueChanged<bool> onTheme,
   required ValueChanged<bool> onAutoRates,
@@ -48,7 +52,11 @@ Future<void> showSettingsSheet({
       showTabs: showTabs,
       uiScale: uiScale,
       locale: locale,
+      numPreset: numPreset,
+      yen: yen,
       onLocale: onLocale,
+      onNumPreset: onNumPreset,
+      onYen: onYen,
       onAnswers: onAnswers,
       onTheme: onTheme,
       onAutoRates: onAutoRates,
@@ -76,7 +84,11 @@ class _SettingsDialog extends StatefulWidget {
   final bool showTabs;
   final double uiScale;
   final String locale;
+  final String numPreset;
+  final String yen;
   final ValueChanged<String> onLocale;
+  final ValueChanged<String> onNumPreset;
+  final ValueChanged<String> onYen;
   final ValueChanged<bool> onAnswers;
   final ValueChanged<bool> onTheme;
   final ValueChanged<bool> onAutoRates;
@@ -101,7 +113,11 @@ class _SettingsDialog extends StatefulWidget {
     required this.showTabs,
     required this.uiScale,
     required this.locale,
+    required this.numPreset,
+    required this.yen,
     required this.onLocale,
+    required this.onNumPreset,
+    required this.onYen,
     required this.onAnswers,
     required this.onTheme,
     required this.onAutoRates,
@@ -131,6 +147,8 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   late bool showTabs = widget.showTabs;
   late double scale = widget.uiScale;
   late String locale = widget.locale;
+  late String numPreset = widget.numPreset;
+  late String yen = widget.yen;
   String? rateError;
 
   @override
@@ -227,6 +245,22 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   Widget _editor() => ListView(
     padding: const EdgeInsets.symmetric(vertical: 8),
     children: [
+      _row(
+        T.of(locale, 'numberFormat'),
+        T.of(locale, 'numberFormatHint'),
+        _choices(numPreset, const {'us': '1,234.56', 'eu': '1.234,56'}, (v) {
+          setState(() => numPreset = v);
+          widget.onNumPreset(v);
+        }),
+      ),
+      _row(
+        T.of(locale, 'yenMeans'),
+        T.of(locale, 'yenMeansHint'),
+        _choices(yen, const {'JPY': 'JPY', 'CNY': 'CNY'}, (v) {
+          setState(() => yen = v);
+          widget.onYen(v);
+        }),
+      ),
       _row(
         T.of(locale, 'textSize'),
         T.of(locale, 'textSizeHint'),
@@ -352,6 +386,36 @@ class _SettingsDialogState extends State<_SettingsDialog> {
           ),
       ],
     ),
+  );
+
+  Widget _choices(
+    String current,
+    Map<String, String> options,
+    ValueChanged<String> pick,
+  ) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final entry in options.entries)
+        TextButton(
+          onPressed: () => pick(entry.key),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(34, 28),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            foregroundColor: current == entry.key
+                ? Palette.answer(dark)
+                : Palette.faint(dark),
+          ),
+          child: Text(
+            entry.value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: current == entry.key
+                  ? FontWeight.w700
+                  : FontWeight.w400,
+            ),
+          ),
+        ),
+    ],
   );
 
   Widget _row(String label, String hint, Widget trailing) => Padding(

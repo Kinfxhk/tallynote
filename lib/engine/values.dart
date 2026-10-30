@@ -101,6 +101,33 @@ const Set<String> currencyCodes = {
   'ILS',
 };
 
+/// How numbers are written and how the ambiguous ¥ sign is read.
+///
+/// [us] is the historical default (`1,234.56`, ¥ = JPY) so existing sheets
+/// keep their answers. [eu] reads `9,875` as 9.875, not nine thousand.
+class NumberFormat {
+  final String decimal;
+  final String group;
+
+  /// ISO code the ¥ glyph parses as. JPY amounts drop cents; CNY keeps them.
+  final String yen;
+
+  const NumberFormat({this.decimal = '.', this.group = ',', this.yen = 'JPY'});
+
+  static const us = NumberFormat();
+  static const eu = NumberFormat(decimal: ',', group: '.');
+
+  NumberFormat withYen(String code) =>
+      NumberFormat(decimal: decimal, group: group, yen: code);
+
+  static NumberFormat fromPrefs(String preset, String yen) {
+    final base = preset == 'eu' ? eu : us;
+    return yen == base.yen ? base : base.withYen(yen);
+  }
+
+  String get preset => decimal == ',' && group == '.' ? 'eu' : 'us';
+}
+
 const Map<String, String> currencyAliases = {
   r'$': 'USD',
   'US\$': 'USD',
@@ -113,8 +140,12 @@ const Map<String, String> currencyAliases = {
   '฿': 'THB',
 };
 
-/// 12 significant digits, thousands separators, no trailing zeros.
-String formatNumber(double v, {int? decimals}) {
+/// 12 significant digits, grouping separators, no trailing zeros.
+String formatNumber(
+  double v, {
+  int? decimals,
+  NumberFormat format = NumberFormat.us,
+}) {
   if (v.isNaN) return 'NaN';
   if (v.isInfinite) return v > 0 ? '∞' : '-∞';
   if (v == 0 && decimals == null) return '0';
@@ -142,10 +173,14 @@ String formatNumber(double v, {int? decimals}) {
   if (neg) intPart = intPart.substring(1);
   final buf = StringBuffer();
   for (var i = 0; i < intPart.length; i++) {
-    if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
+    if (format.group.isNotEmpty && i > 0 && (intPart.length - i) % 3 == 0) {
+      buf.write(format.group);
+    }
     buf.write(intPart[i]);
   }
-  final out = frac.isEmpty ? buf.toString() : '${buf.toString()}.$frac';
+  final out = frac.isEmpty
+      ? buf.toString()
+      : '${buf.toString()}${format.decimal}$frac';
   return neg ? '-$out' : out;
 }
 
@@ -184,29 +219,39 @@ String _unitLabel(String id, double value) {
   return id;
 }
 
-String formatValue(Value v, {int? decimals}) {
+String formatValue(
+  Value v, {
+  int? decimals,
+  NumberFormat format = NumberFormat.us,
+}) {
   switch (v) {
     case NumValue(:final value, :final unit):
-      final n = formatNumber(value, decimals: decimals);
+      final n = formatNumber(value, decimals: decimals, format: format);
       if (unit == null) return n;
       return '$n ${_unitLabel(unit.id, value)}';
     case MoneyValue(:final value, :final currency):
-      final n = formatNumber(value.abs(), decimals: decimals ?? 2);
+      final n = formatNumber(
+        value.abs(),
+        decimals: decimals ?? 2,
+        format: format,
+      );
       final sym = currencySymbols[currency] ?? '$currency ';
       final sign = value < 0 ? '-' : '';
       return currency == 'JPY' || currency == 'KRW'
-          ? '$sign$sym${formatNumber(value.abs().roundToDouble())}'
+          ? '$sign$sym${formatNumber(value.abs().roundToDouble(), format: format)}'
           : '$sign$sym$n';
     case PercentValue(:final ratio):
-      return '${formatNumber(ratio * 100, decimals: decimals)}%';
+      return '${formatNumber(ratio * 100, decimals: decimals, format: format)}%';
     case DateValue(:final date, :final hasTime):
       return hasTime ? _fmtDateTime(date) : _fmtDate(date);
     case DurationValue(:final seconds):
-      return _fmtDuration(seconds);
+      return _fmtDuration(seconds, format);
     case BoolValue(:final value):
       return value ? 'true' : 'false';
     case ListValue(:final items):
-      return items.map(formatValue).join(', ');
+      return items
+          .map((e) => formatValue(e, decimals: decimals, format: format))
+          .join(', ');
     case ErrorValue(:final message):
       return message;
   }
@@ -236,10 +281,10 @@ String _fmtDateTime(DateTime d) {
   return '${_fmtDate(d)} at $h:$m $ap';
 }
 
-String _fmtDuration(double seconds) {
+String _fmtDuration(double seconds, NumberFormat format) {
   final s = seconds.abs();
-  if (s < 60) return '${formatNumber(seconds)} s';
-  if (s < 3600) return '${formatNumber(seconds / 60)} min';
-  if (s < 86400) return '${formatNumber(seconds / 3600)} h';
-  return '${formatNumber(seconds / 86400)} days';
+  if (s < 60) return '${formatNumber(seconds, format: format)} s';
+  if (s < 3600) return '${formatNumber(seconds / 60, format: format)} min';
+  if (s < 86400) return '${formatNumber(seconds / 3600, format: format)} h';
+  return '${formatNumber(seconds / 86400, format: format)} days';
 }
