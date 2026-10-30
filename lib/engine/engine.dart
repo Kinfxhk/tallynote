@@ -175,10 +175,12 @@ class SheetEngine {
         if (collect && tag != null && value != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
         }
+        final bad = value is ErrorValue;
         results.add(LineResult(
           text: raw,
-          value: value,
-          display: value == null ? null : formatValue(value),
+          value: bad ? null : value,
+          display: value == null || bad ? null : formatValue(value),
+          error: bad ? value.message : null,
           tag: tag,
         ));
       } on UnresolvedWord {
