@@ -197,6 +197,53 @@ class UnitRegistry {
     return base / to.factor - to.offset;
   }
 
+  /// Rewrite a compound unit into the one a person would write.
+  ///
+  /// `3 min * 15 mph` is 45 min·mph in base arithmetic and 0.75 mi on paper.
+  /// The family (mi vs km, mph vs m/s) follows the units that were typed.
+  (double, Unit) ideal(double value, Unit unit, List<Unit> hints) {
+    final d = unit.dims;
+    if (d.length == 2 && d['time'] == 1 && d['speed'] == 1) {
+      final meters = value * unit.factor;
+      final chosen = _pickLength(hints);
+      return (_tidy(meters / chosen.factor), chosen);
+    }
+    if (d.length == 2 && d['length'] == 1 && d['time'] == -1) {
+      final mps = value * unit.factor;
+      final chosen = _pickSpeed(hints);
+      return (_tidy(mps / chosen.factor), chosen);
+    }
+    return (value, unit);
+  }
+
+  static const _imperial = {'mph', 'mi', 'ft', 'yd', 'in'};
+  static const _nautical = {'knot', 'nmi'};
+
+  Unit _pickLength(List<Unit> hints) {
+    final ids = hints.map((e) => e.id).toSet();
+    if (ids.any(_nautical.contains)) return _byName['nmi']!;
+    if (ids.any(_imperial.contains)) return _byName['mi']!;
+    if (ids.contains('km') || ids.contains('km/h')) return _byName['km']!;
+    return _byName['m']!;
+  }
+
+  Unit _pickSpeed(List<Unit> hints) {
+    final ids = hints.map((e) => e.id).toSet();
+    if (ids.any(_imperial.contains)) return _byName['mph']!;
+    if (ids.contains('km') || ids.contains('km/h')) return _byName['km/h']!;
+    if (ids.contains('knot')) return _byName['knot']!;
+    return _byName['m/s']!;
+  }
+
+  /// 45.00000000000001 min·mph must read 45. Twelve significant digits is
+  /// what the answer column shows, so snapping happens at that precision.
+  double _tidy(double v) {
+    if (v.isNaN || v.isInfinite || v.abs() >= 1e12) return v;
+    final r = double.parse(v.toStringAsPrecision(12));
+    final nearest = r.roundToDouble();
+    return (r - nearest).abs() <= 1e-9 * (nearest.abs() + 1) ? nearest : r;
+  }
+
   /// Canonical unit for a dimension, used to normalise mixed additions.
   Unit baseFor(Unit u) {
     const bases = {

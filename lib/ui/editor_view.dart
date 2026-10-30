@@ -40,6 +40,10 @@ class EditorView extends StatefulWidget {
   final Color? positiveColour;
   final Color? negativeColour;
 
+  /// The sheet's number format. The column must split on the same mark it
+  /// painted, or `1.234,56` aligns on the grouping dot.
+  final NumberFormat numberFormat;
+
   const EditorView({
     super.key,
     required this.controller,
@@ -62,6 +66,7 @@ class EditorView extends StatefulWidget {
     this.wheelBlocked,
     this.positiveColour,
     this.negativeColour,
+    this.numberFormat = NumberFormat.us,
   });
 
   @override
@@ -116,6 +121,8 @@ class _EditorViewState extends State<EditorView> {
           widget.results.map((r) => r.display).whereType<String>(),
           (s) =>
               measureAnswerText(s, painted, MediaQuery.textScalerOf(context)),
+          decimal: widget.numberFormat.decimal,
+          group: widget.numberFormat.group,
         );
 
         return DragTarget<int>(
@@ -180,7 +187,8 @@ class _EditorViewState extends State<EditorView> {
                 ),
                 if (widget.answersVisible)
                   for (var i = 0; i < widget.results.length; i++)
-                    if (widget.results[i].display != null)
+                    if (widget.results[i].display != null ||
+                        widget.results[i].engineError)
                       Positioned(
                         top: (tops.length > i ? tops[i] : 0),
                         right: 0,
@@ -200,6 +208,7 @@ class _EditorViewState extends State<EditorView> {
                               child:
                                   (widget.showSteps &&
                                       widget.explain != null &&
+                                      !widget.results[i].engineError &&
                                       _hasOperators(widget.results[i].text))
                                   ? _StepButton(
                                       dark: widget.dark,
@@ -257,11 +266,28 @@ class _EditorViewState extends State<EditorView> {
     final painted = DefaultTextStyle.of(context).style
         .merge(answerStyle(widget.dark, scale: widget.scale));
     final style = painted.copyWith(color: _answerColour(r) ?? painted.color);
+    // A real error is this line's answer: say so where the number would be.
+    if (r.engineError) {
+      return Text(
+        r.error!,
+        key: ValueKey('engine-error-$i'),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.right,
+        style: style.copyWith(fontStyle: FontStyle.italic),
+      );
+    }
     final cell = _tapForSteps(
       line: r.text,
       canExplain:
           widget.showSteps && widget.explain != null && _hasOperators(r.text),
-      child: AnswerReadout(display: r.display!, style: style, metrics: metrics),
+      child: AnswerReadout(
+        display: r.display!,
+        style: style,
+        metrics: metrics,
+        decimal: widget.numberFormat.decimal,
+        group: widget.numberFormat.group,
+      ),
     );
 
     if (widget.onInsertReference == null) return cell;

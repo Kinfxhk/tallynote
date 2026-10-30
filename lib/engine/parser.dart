@@ -1,5 +1,6 @@
 import 'lexer.dart';
 import 'units.dart';
+import 'values.dart';
 
 sealed class Node {
   const Node();
@@ -95,9 +96,11 @@ const _funcNames = {
 class Parser {
   final List<Token> tokens;
   final UnitRegistry units;
+  final NumberFormat format;
   int _p = 0;
 
-  Parser(String source, this.units) : tokens = Lexer(source).tokenize();
+  Parser(String source, this.units, {this.format = NumberFormat.us})
+    : tokens = Lexer(source, format: format).tokenize();
 
   bool get atEnd => _p >= tokens.length;
 
@@ -634,7 +637,11 @@ class Parser {
   // ---- entry points used by the engine -------------------------------------
 
   /// Parses just an expression from a substring range.
-  static Node parseExpression(String src, UnitRegistry units) {
-    return Parser(src, units).parse();
+  static Node parseExpression(
+    String src,
+    UnitRegistry units, {
+    NumberFormat format = NumberFormat.us,
+  }) {
+    return Parser(src, units, format: format).parse();
   }
 }
