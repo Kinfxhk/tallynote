@@ -135,7 +135,16 @@ flutter build apk --release
 flutter build web --release --base-href /tallynote/ --no-web-resources-cdn
 ```
 
-`--no-web-resources-cdn` matters: CanvasKit is served from the bundle, so opening the page touches no CDN. CI builds Android, Linux, Windows and Web on every push.
+Windows needs the **Desktop development with C++** workload:
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --silent `
+  --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+flutter build windows --release
+```
+
+`--no-web-resources-cdn` matters: CanvasKit is served from the bundle, so opening the page touches no CDN. CI builds Android, Linux, Windows and Web on every push; the Windows
+`tallynote.exe` in the release was built and run natively on Windows 11.
 
 ## License
 
