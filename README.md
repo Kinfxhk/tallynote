@@ -8,13 +8,15 @@ Offline first: nothing is computed in the cloud, and the page works with the net
 
 Support: **[Buy Me a Coffee](https://buymeacoffee.com/kinfxhk)**
 
-| Platform | Download | Status |
+| Platform | Download | Notes |
 |---|---|---|
-| Android | `app-release.apk` | built and run on a device |
-| Windows | `tallynote-windows.zip` (portable) | built and run on Windows 11 |
-| Linux | `tallynote-linux.tar.gz` (portable) | built in CI |
+| Android | `app-release.apk` | signed with the release key; installed and run on a device |
+| Windows | `Tallynote-0.2.0-setup.exe` | per-user install, Start-menu shortcut, uninstaller |
+| Windows (portable) | `tallynote-windows.zip` | unzip and run `tallynote.exe` |
+| Linux | `tallynote_0.2.0_amd64.deb` | installs to `/usr/lib/tallynote` with a desktop entry |
+| Linux (portable) | `tallynote-linux.tar.gz` | unpack and run `bundle/tallynote` |
 | Web | [kinfxhk.github.io/tallynote](https://kinfxhk.github.io/tallynote/) | deployed from `main` |
-| macOS | not yet | needs a full Xcode install |
+| macOS / iOS | not yet | needs a full Xcode install |
 
 <img src="docs/android-formatting.png" width="300" alt="Tallynote on Android: a draft line, a bold line, and answers aligned on the decimal point">
 
