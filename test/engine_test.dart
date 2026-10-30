@@ -88,6 +88,16 @@ void main() {
     expect(one('含運費 30乘3'), '90');
   });
 
+  test('operator precedence, including the x sign with no spaces', () {
+    expect(one('6+3x30'), '96');
+    expect(one('6+3x30*2'), '186');
+    expect(one('2+3x4'), '14');
+    expect(one('10-2x3'), '4');
+    expect(one('6+3乘30'), '96');
+    expect(one('(6+3)x30'), '270');
+    expect(one('6+3*30'), '96');
+  });
+
   test('uppercase X is not a times sign', () {
     expect(one('4300 x 30%'), '1,290');
     expect(one('4300 X 30%'), isNull);

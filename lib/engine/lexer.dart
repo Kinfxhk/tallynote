@@ -106,6 +106,12 @@ class Lexer {
 
   void _word() {
     final start = _i;
+    // "3x30": the times sign is its own token, the digits after it a number
+    if (src[_i] == 'x' && _i + 1 < src.length && _isDigit(src[_i + 1])) {
+      _i++;
+      out.add(Token(TokType.word, 'x', start));
+      return;
+    }
     final cjkStart = _isCjk(src[_i]);
     while (_i < src.length) {
       final c = src[_i];
