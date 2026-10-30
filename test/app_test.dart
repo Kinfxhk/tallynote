@@ -6,6 +6,15 @@ import 'package:tallynote/ui/editor_view.dart';
 import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
+/// Answers are Text widgets; the editor's EditableText is not one.
+Finder answerText(String needle) => find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').contains(needle),
+    );
+
+Finder answerExact(String value) => find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').replaceAll('\u00A0', ' ').trim() == value,
+    );
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -81,7 +90,8 @@ void main() {
     expect(find.textContaining('1 + 2 = 3'), findsOneWidget);
   });
 
-  testWidgets('decimal points line up in the answer column', (tester) async {
+  testWidgets('answers share one right edge and width (decimal grid)',
+      (tester) async {
     await boot(tester);
     final editor = find.descendant(
       of: find.byType(EditorView),
@@ -90,17 +100,14 @@ void main() {
     await tester.enterText(editor, '2000+3000\n9.5*3\n1234.5*2');
     await tester.pump(const Duration(milliseconds: 60));
 
-    // only 28.5 draws a point; integers stop at the same column
-    final dot = find.text('.');
-    expect(dot, findsOneWidget);
-    final dotX = tester.getTopLeft(dot).dx;
+    Rect rectOf(String needle) => tester.getRect(answerText(needle).first);
 
-    for (final head in ['5,000', '28', '2,469']) {
-      expect(
-        tester.getTopRight(find.text(head)).dx,
-        closeTo(dotX, 0.6),
-        reason: 'head $head should end at the decimal column',
-      );
+    final a = rectOf('5,000');
+    final b = rectOf('28.5');
+    final c = rectOf('2,469');
+    for (final r in [b, c]) {
+      expect(r.width, closeTo(a.width, 0.6));
+      expect(r.right, closeTo(a.right, 0.6));
     }
   });
 
@@ -113,16 +120,10 @@ void main() {
     await tester.enterText(editor, '5-10\n2+3');
     await tester.pump(const Duration(milliseconds: 60));
 
-    Color? colourOf(String data) {
-      final t = tester
-          .widgetList<Text>(find.byType(Text))
-          .where((w) => w.data == data)
-          .firstOrNull;
-      return t?.style?.color;
-    }
-
-    expect(colourOf('-5'), Palette.negative(false));
-    expect(colourOf('5'), Palette.positive(false));
+    expect(tester.widget<Text>(answerExact('-5')).style?.color,
+        Palette.negative(false));
+    expect(tester.widget<Text>(answerExact('5')).style?.color,
+        Palette.positive(false));
   });
 
   testWidgets(
@@ -158,31 +159,24 @@ void main() {
     },
   );
 
-  testWidgets('money keeps its cents and the dots align', (tester) async {
+  testWidgets('money keeps its cents on the same line', (tester) async {
     await boot(tester);
     final editor = find.descendant(
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    await tester.enterText(
-      editor,
-      r'$4,036.29'
-      '\n'
-      r'$1,251.90',
-    );
+    await tester.enterText(editor, r'$4,036.29' '\n' r'$1,251.90');
     await tester.pump(const Duration(milliseconds: 80));
 
-    // cents are never clipped away
-    expect(find.text(r'$4,036'), findsOneWidget);
-    expect(find.text('29'), findsOneWidget);
-    expect(find.text(r'$1,251'), findsOneWidget);
-    expect(find.text('90'), findsOneWidget);
+    // cents are part of the answer text, never a separate fragment
+    expect(answerText(r'$4,036.29'), findsOneWidget);
+    expect(answerText(r'$1,251.90'), findsOneWidget);
 
-    // both decimal points sit on one vertical line
-    final dots = find.text('.');
-    expect(dots, findsNWidgets(2));
-    final xs = List.generate(2, (i) => tester.getTopLeft(dots.at(i)).dx);
-    expect(xs[0], closeTo(xs[1], 0.6));
+    Rect rectOf(String needle) => tester.getRect(answerText(needle).first);
+    final a = rectOf(r'$4,036.29');
+    final b = rectOf(r'$1,251.90');
+    expect(b.width, closeTo(a.width, 0.6));
+    expect(b.top, closeTo(a.top + a.height, 40)); // next line, not merged
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {

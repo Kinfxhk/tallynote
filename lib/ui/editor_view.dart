@@ -450,56 +450,36 @@ class _AnswerCell extends StatelessWidget {
     required this.metrics,
   });
 
+  /// One Text, padded with non-breaking spaces, so the parts of a number can
+  /// never be laid out on different lines. NBSP is a real glyph, so it is not
+  /// trimmed the way normal trailing spaces are.
   @override
   Widget build(BuildContext context) {
+    const nbsp = '\u00A0';
     final dot = display.lastIndexOf('.');
-    final hasFrac =
-        dot > 0 &&
+    final hasFrac = dot > 0 &&
         display.length - dot - 1 <= metrics.maxFrac &&
         RegExp(r'^\d+$').hasMatch(display.substring(dot + 1));
-    // plain integers belong in the grid too: their decimal point is implied
     final isInteger = dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
-    if (!hasFrac && !isInteger) {
-      return SizedBox(
-        width: metrics.totalW,
-        child: Text(
-          display,
-          textAlign: TextAlign.right,
-          maxLines: 1,
-          softWrap: false,
-          style: style,
-        ),
-      );
+
+    String text = display;
+    if (hasFrac) {
+      final head = display.substring(0, dot).padLeft(metrics.maxHead, nbsp);
+      final frac = display.substring(dot + 1).padRight(metrics.maxFrac, nbsp);
+      text = '$head.$frac';
+    } else if (isInteger) {
+      text = display.padLeft(metrics.maxHead, nbsp) +
+          nbsp * (metrics.maxFrac == 0 ? 0 : 1 + metrics.maxFrac);
     }
 
-    final head = hasFrac ? display.substring(0, dot) : display;
-    final frac = hasFrac ? display.substring(dot + 1) : '';
     return SizedBox(
       width: metrics.totalW,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          SizedBox(
-            width: metrics.headW,
-            child: Text(
-              head,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              softWrap: false,
-              style: style,
-            ),
-          ),
-          SizedBox(
-            width: metrics.charW,
-            // integers get a blank here so their digits end at the decimal
-            // column instead of growing a stray dot
-            child: Text(hasFrac ? '.' : '', style: style),
-          ),
-          SizedBox(
-            width: metrics.charW * metrics.maxFrac,
-            child: Text(frac, style: style),
-          ),
-        ],
+      child: Text(
+        text,
+        textAlign: TextAlign.right,
+        maxLines: 1,
+        softWrap: false,
+        style: style,
       ),
     );
   }
