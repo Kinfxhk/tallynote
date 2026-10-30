@@ -1,0 +1,187 @@
+import 'units.dart';
+
+/// A value a line can evaluate to.
+sealed class Value {
+  const Value();
+}
+
+class NumValue extends Value {
+  final double value;
+  final Unit? unit;
+  const NumValue(this.value, [this.unit]);
+}
+
+class MoneyValue extends Value {
+  final double value;
+  final String currency; // ISO 4217
+  const MoneyValue(this.value, this.currency);
+}
+
+class PercentValue extends Value {
+  final double ratio; // 25% -> 0.25
+  const PercentValue(this.ratio);
+}
+
+class DateValue extends Value {
+  final DateTime date;
+  final bool hasTime;
+  const DateValue(this.date, {this.hasTime = false});
+}
+
+class DurationValue extends Value {
+  final double seconds;
+  const DurationValue(this.seconds);
+}
+
+class BoolValue extends Value {
+  final bool value;
+  const BoolValue(this.value);
+}
+
+class ListValue extends Value {
+  final List<Value> items;
+  const ListValue(this.items);
+}
+
+class ErrorValue extends Value {
+  final String message;
+  const ErrorValue(this.message);
+}
+
+const Map<String, String> currencySymbols = {
+  'USD': r'$',
+  'HKD': r'HK$',
+  'CNY': r'¥',
+  'JPY': r'¥',
+  'EUR': '€',
+  'GBP': '£',
+  'KRW': '₩',
+  'TWD': r'NT$',
+  'SGD': r'S$',
+  'AUD': r'A$',
+  'CAD': r'C$',
+  'CHF': 'CHF ',
+  'INR': '₹',
+  'THB': '฿',
+  'MYR': 'RM ',
+  'PHP': '₱',
+  'VND': '₫',
+};
+
+const Set<String> currencyCodes = {
+  'USD', 'HKD', 'CNY', 'JPY', 'EUR', 'GBP', 'KRW', 'TWD', 'SGD', 'AUD',
+  'CAD', 'CHF', 'INR', 'THB', 'MYR', 'PHP', 'VND', 'NZD', 'SEK', 'NOK',
+  'DKK', 'RUB', 'BRL', 'MXN', 'ZAR', 'AED', 'IDR', 'TRY', 'PLN', 'ILS',
+};
+
+const Map<String, String> currencyAliases = {
+  r'$': 'USD',
+  'US\$': 'USD',
+  'HK\$': 'HKD',
+  '€': 'EUR',
+  '£': 'GBP',
+  '¥': 'JPY',
+  '₩': 'KRW',
+  '₹': 'INR',
+  '฿': 'THB',
+};
+
+/// 12 significant digits, thousands separators, no trailing zeros.
+String formatNumber(double v, {int? decimals}) {
+  if (v.isNaN) return 'NaN';
+  if (v.isInfinite) return v > 0 ? '∞' : '-∞';
+  if (v == 0) return '0';
+
+  var s = v.abs() >= 1e15 || v.abs() < 1e-9
+      ? v.toStringAsExponential(6)
+      : _toPrecision(v, decimals ?? 12);
+
+  if (s.contains('e')) {
+    s = s.replaceAll(RegExp(r'0+e'), 'e').replaceAll(RegExp(r'\.e'), 'e');
+    return v < 0 ? '-$s' : s;
+  }
+
+  var parts = s.split('.');
+  var intPart = parts[0];
+  var frac = parts.length > 1 ? parts[1] : '';
+  // strip trailing zeros only when no explicit decimal count was requested
+  if (decimals == null) {
+    frac = frac.replaceFirst(RegExp(r'0+$'), '');
+  }
+  final neg = intPart.startsWith('-');
+  if (neg) intPart = intPart.substring(1);
+  final buf = StringBuffer();
+  for (var i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
+    buf.write(intPart[i]);
+  }
+  final out = frac.isEmpty ? buf.toString() : '${buf.toString()}.$frac';
+  return neg ? '-$out' : out;
+}
+
+String _toPrecision(double v, int sig) {
+  if (v == v.roundToDouble() && v.abs() < 1e15) {
+    return v.toStringAsFixed(0);
+  }
+  final s = v.toStringAsPrecision(sig);
+  if (s.contains('e')) {
+    // fall back to fixed for moderate magnitudes
+    final mag = v.abs();
+    if (mag < 1e15 && mag > 1e-6) {
+      var d = sig - 1 - (v.abs().toStringAsExponential().split('e')[0].length - 2);
+      if (d < 0) d = 0;
+      if (d > 12) d = 12;
+      return v.toStringAsFixed(d);
+    }
+  }
+  return s;
+}
+
+String formatValue(Value v, {int? decimals}) {
+  switch (v) {
+    case NumValue(:final value, :final unit):
+      final n = formatNumber(value, decimals: decimals);
+      return unit == null ? n : '$n ${unit.id}';
+    case MoneyValue(:final value, :final currency):
+      final n = formatNumber(value.abs(), decimals: decimals);
+      final sym = currencySymbols[currency] ?? '$currency ';
+      final sign = value < 0 ? '-' : '';
+      return currency == 'JPY' || currency == 'KRW'
+          ? '$sign$sym${formatNumber(value.abs().roundToDouble())}'
+          : '$sign$sym$n';
+    case PercentValue(:final ratio):
+      return '${formatNumber(ratio * 100, decimals: decimals)}%';
+    case DateValue(:final date, :final hasTime):
+      return hasTime ? _fmtDateTime(date) : _fmtDate(date);
+    case DurationValue(:final seconds):
+      return _fmtDuration(seconds);
+    case BoolValue(:final value):
+      return value ? 'true' : 'false';
+    case ListValue(:final items):
+      return items.map(formatValue).join(', ');
+    case ErrorValue(:final message):
+      return message;
+  }
+}
+
+const _months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
+
+String _fmtDateTime(DateTime d) {
+  final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
+  final m = d.minute.toString().padLeft(2, '0');
+  final ap = d.hour < 12 ? 'AM' : 'PM';
+  return '${_fmtDate(d)} at $h:$m $ap';
+}
+
+String _fmtDuration(double seconds) {
+  final s = seconds.abs();
+  if (s < 60) return '${formatNumber(seconds)} s';
+  if (s < 3600) return '${formatNumber(seconds / 60)} min';
+  if (s < 86400) return '${formatNumber(seconds / 3600)} h';
+  return '${formatNumber(seconds / 86400)} days';
+}
