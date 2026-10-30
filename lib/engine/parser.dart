@@ -121,6 +121,22 @@ class Parser {
     return c != null && c.type == TokType.word && c.text == 'x';
   }
 
+  bool _matchLparen() {
+    if (cur?.type == TokType.lparen) {
+      _p++;
+      return true;
+    }
+    return false;
+  }
+
+  bool _matchComma() {
+    if (cur?.type == TokType.comma) {
+      _p++;
+      return true;
+    }
+    return false;
+  }
+
   bool _matchRparen() {
     if (cur?.type == TokType.rparen) {
       _p++;
@@ -363,10 +379,10 @@ class Parser {
   Node _call() {
     final name = tokens[_p++].text.toLowerCase();
     final args = <Node>[];
-    if (_matchOp('(')) {
+    if (_matchLparen()) {
       if (!_matchRparen()) {
         args.add(_additive());
-        while (_matchOp(',') || _matchOp(';')) {
+        while (_matchComma() || _matchOp(';')) {
           args.add(_additive());
         }
         if (!_matchRparen()) throw ParseError('missing ) in $name()');

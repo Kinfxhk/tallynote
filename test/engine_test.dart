@@ -89,6 +89,7 @@ void main() {
   });
 
   test('operator precedence, including the x sign with no spaces', () {
+    expect(one('4+4x3+3'), '19');
     expect(one('6+3x30'), '96');
     expect(one('6+3x30*2'), '186');
     expect(one('2+3x4'), '14');
@@ -96,6 +97,17 @@ void main() {
     expect(one('6+3乘30'), '96');
     expect(one('(6+3)x30'), '270');
     expect(one('6+3*30'), '96');
+  });
+
+  test('functions in every form people type', () {
+    expect(one('sin 30 deg'), '0.5');
+    expect(one('sin30deg'), '0.5');
+    expect(one('sin(pi/2)'), '1');
+    expect(one('cos pi'), '-1');
+    expect(one('sqrt16'), '4');
+    expect(one('max(1, 9, 4)'), '9');
+    expect(one('round(3.14159, 2)'), '3.14');
+    expect(one('round 3.14159 2'), '3.14');
   });
 
   test('uppercase X is not a times sign', () {

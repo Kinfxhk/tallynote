@@ -75,6 +75,9 @@ class Evaluator {
     final key = name.toLowerCase();
     final v = ctx.vars[key];
     if (v != null) return v;
+    if (key == 'pi' || key == 'π') return NumValue(math.pi);
+    if (key == 'e') return NumValue(math.e);
+    if (key == 'tau' || key == 'τ') return NumValue(2 * math.pi);
     // unknown word that looks like a unit-less number is a text token
     throw UnresolvedWord(name);
   }
@@ -266,6 +269,9 @@ class Evaluator {
     return currencyCodes.contains(upper) ? upper : null;
   }
 
+  /// Floating point noise: sin(pi) should read 0, not 1.2e-16.
+  double _snap(double v) => v.abs() < 1e-12 ? 0.0 : v;
+
   double _round(double v) {
     if (v.abs() >= 1e12) return v;
     return double.parse(v.toStringAsPrecision(12));
@@ -309,11 +315,11 @@ class Evaluator {
         final v = n(0);
         return v == null ? const ErrorValue('exp needs a number') : NumValue(math.exp(v));
       case 'sin':
-        return NumValue(math.sin(angle(0) ?? 0));
+        return NumValue(_snap(math.sin(angle(0) ?? 0)));
       case 'cos':
-        return NumValue(math.cos(angle(0) ?? 0));
+        return NumValue(_snap(math.cos(angle(0) ?? 0)));
       case 'tan':
-        return NumValue(math.tan(angle(0) ?? 0));
+        return NumValue(_snap(math.tan(angle(0) ?? 0)));
       case 'asin' || 'arcsin':
         return NumValue(math.asin(n(0) ?? 0));
       case 'acos' || 'arccos':

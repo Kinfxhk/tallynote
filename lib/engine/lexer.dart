@@ -104,8 +104,26 @@ class Lexer {
     return true;
   }
 
+  static const _funcNames = {
+    'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'arcsin', 'arccos',
+    'arctan', 'sqrt', 'cbrt', 'abs', 'log', 'ln', 'exp', 'round', 'ceil',
+    'floor', 'fact', 'min', 'max', 'pow', 'root', 'random',
+  };
+
   void _word() {
     final start = _i;
+    // "sin30" / "sqrt16": function name glued to its argument
+    var j = _i;
+    while (j < src.length && _isLetter(src[j]) && !_isCjk(src[j])) {
+      j++;
+    }
+    if (j > _i && j < src.length && _isDigit(src[j]) &&
+        _funcNames.contains(src.substring(_i, j).toLowerCase())) {
+      final name = src.substring(_i, j);
+      _i = j;
+      out.add(Token(TokType.word, name, start));
+      return;
+    }
     // "3x30": the times sign is its own token, the digits after it a number
     if (src[_i] == 'x' && _i + 1 < src.length && _isDigit(src[_i + 1])) {
       _i++;
