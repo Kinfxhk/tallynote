@@ -36,6 +36,7 @@ class _AppState extends State<TallynoteApp> {
   bool _sidebarOpen = true;
   bool _answersVisible = true;
   bool _autoRates = true;
+  bool _steps = true;
   bool _syncing = false;
   Timer? _saveTimer;
   String? _boundSheetId;
@@ -53,6 +54,7 @@ class _AppState extends State<TallynoteApp> {
     _dark = prefs.getBool('tallynote.dark') ?? false;
     _answersVisible = prefs.getBool('tallynote.answers') ?? true;
     _autoRates = prefs.getBool('tallynote.autoRates') ?? true;
+    _steps = prefs.getBool('tallynote.steps') ?? true;
 
     await _store.load();
     _store.addListener(_onStore);
@@ -120,6 +122,7 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.dark', _dark);
     await prefs.setBool('tallynote.answers', _answersVisible);
     await prefs.setBool('tallynote.autoRates', _autoRates);
+    await prefs.setBool('tallynote.steps', _steps);
   }
 
   @override
@@ -182,6 +185,7 @@ class _AppState extends State<TallynoteApp> {
                             dark: _dark,
                             answersVisible: _answersVisible,
                             autoRates: _autoRates,
+                            steps: _steps,
                             onAnswers: (v) {
                               setState(() => _answersVisible = v);
                               _saveSettings();
@@ -192,6 +196,10 @@ class _AppState extends State<TallynoteApp> {
                             },
                             onAutoRates: (v) {
                               setState(() => _autoRates = v);
+                              _saveSettings();
+                            },
+                            onSteps: (v) {
+                              setState(() => _steps = v);
                               _saveSettings();
                             },
                             onRefreshRates: () async {
@@ -212,6 +220,8 @@ class _AppState extends State<TallynoteApp> {
                             results: _results,
                             dark: _dark,
                             answersVisible: _answersVisible,
+                            showSteps: _steps,
+                            explain: _engine.explain,
                           ),
                         ),
                         _StatusBar(

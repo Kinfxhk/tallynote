@@ -10,15 +10,18 @@ Future<void> showSettingsSheet({
   required bool dark,
   required bool answersVisible,
   required bool autoRates,
+  required bool steps,
   required ValueChanged<bool> onAnswers,
   required ValueChanged<bool> onTheme,
   required ValueChanged<bool> onAutoRates,
+  required ValueChanged<bool> onSteps,
   required Future<bool> Function() onRefreshRates,
 }) {
   // local copies so repeated taps in the sheet stay consistent
   var localAnswers = answersVisible;
   var localDark = dark;
   var localRates = autoRates;
+  var localSteps = steps;
 
   return showModalBottomSheet<void>(
     context: context,
@@ -95,6 +98,16 @@ Future<void> showSettingsSheet({
                 }), onTap: () {
                   localDark = !localDark;
                   onTheme(localDark);
+                  setSheet(() {});
+                }),
+                row('Step breakdown', 'Show a + next to complex answers',
+                    plus(localSteps, (v) {
+                  localSteps = v;
+                  onSteps(v);
+                  setSheet(() {});
+                }), onTap: () {
+                  localSteps = !localSteps;
+                  onSteps(localSteps);
                   setSheet(() {});
                 }),
                 row(

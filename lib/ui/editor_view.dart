@@ -12,6 +12,8 @@ class EditorView extends StatefulWidget {
   final List<LineResult> results;
   final bool dark;
   final bool answersVisible;
+  final List<String> Function(String line)? explain;
+  final bool showSteps;
 
   const EditorView({
     super.key,
@@ -19,6 +21,8 @@ class EditorView extends StatefulWidget {
     required this.results,
     required this.dark,
     this.answersVisible = true,
+    this.explain,
+    this.showSteps = true,
   });
 
   @override
@@ -99,16 +103,32 @@ class _EditorViewState extends State<EditorView> {
                     top: (tops.length > i ? tops[i] : 0),
                     right: 0,
                     width: answerW,
-                    child: IgnorePointer(
-                      child: Text(
-                        widget.results[i].display!,
-                        textAlign: TextAlign.right,
-                        style: answerStyle(widget.dark).copyWith(
-                          color: widget.results[i].error != null
-                              ? Palette.answer(widget.dark).withValues(alpha: 0.6)
-                              : null,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: IgnorePointer(
+                            child: Text(
+                              widget.results[i].display!,
+                              textAlign: TextAlign.right,
+                              style: answerStyle(widget.dark).copyWith(
+                                color: widget.results[i].error != null
+                                    ? Palette.answer(widget.dark)
+                                        .withValues(alpha: 0.6)
+                                    : null,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (widget.showSteps &&
+                            widget.explain != null &&
+                            _hasOperators(widget.results[i].text))
+                          _StepButton(
+                            dark: widget.dark,
+                            onTap: () => _openSteps(widget.results[i].text),
+                          ),
+                      ],
                     ),
                   ),
           ],
@@ -116,6 +136,66 @@ class _EditorViewState extends State<EditorView> {
       );
     });
   }
+
+  static bool _hasOperators(String line) =>
+      RegExp(r'[+\-*/^%×÷]|\b(乘|除|加|減|减)\b').hasMatch(line) ||
+      line.contains('乘') || line.contains('除') || line.contains('加') || line.contains('減');
+
+  Future<void> _openSteps(String line) async {
+    final steps = widget.explain!(line);
+    if (!mounted) return;
+    if (steps.isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Palette.bg(widget.dark),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Steps',
+                  style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w600,
+                    color: Palette.faint(widget.dark),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SelectableText(
+                  steps.join('\n'),
+                  style: editStyle(),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('Close',
+                        style: TextStyle(
+                            fontSize: 13, color: Palette.answer(widget.dark))),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextStyle editStyle() => TextStyle(
+        fontFamily: monoFamily,
+        fontSize: 13.5,
+        height: 1.7,
+        color: Palette.fg(widget.dark),
+      );
 
   /// Vertical offset of each logical line, honouring soft wraps.
   List<double> _lineTops(String text, TextStyle style, double width) {
@@ -139,5 +219,24 @@ class _EditorViewState extends State<EditorView> {
       offset += line.length + 1;
     }
     return tops;
+  }
+}
+
+class _StepButton extends StatelessWidget {
+  final bool dark;
+  final VoidCallback onTap;
+
+  const _StepButton({required this.dark, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: Icon(Icons.add, size: 13, color: Palette.faint(dark)),
+      ),
+    );
   }
 }

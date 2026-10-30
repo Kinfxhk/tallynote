@@ -45,6 +45,68 @@ class SheetEngine {
         dates = DateParser(now: now),
         rates = rates ?? const {'USD': 1, 'HKD': 7.8};
 
+  /// Walks the parsed expression and returns one line per operation, e.g.
+  /// ["2.5 + 7.5 = 10", "10 * 1.11 = 11.1", ...]. Empty when the line is a
+  /// single value or a phrase the parser does not own.
+  List<String> explain(String line) {
+    var body = line.trim();
+    if (body.isEmpty) return const [];
+    final tag = _extractTag(body);
+    if (tag != null) body = body.substring(0, body.lastIndexOf('#')).trim();
+
+    final ctx = EvalContext(units: units, now: dates.now, rates: rates);
+    final ev = Evaluator(ctx);
+    final steps = <String>[];
+
+    String walk(Node n) {
+      switch (n) {
+        case NumberNode(:final value, :final unit):
+          return unit == null
+              ? formatNumber(value)
+              : '${formatNumber(value)} ${unit.id}';
+        case MoneyNode(:final value, :final currency):
+          return '${formatNumber(value)} $currency';
+        case VarNode(:final name):
+          return name;
+        case PercentNode(:final operand):
+          return '${walk(operand)}%';
+        case UnaryNode(:final op, :final operand):
+          return '$op${walk(operand)}';
+        case BinNode(:final op, :final left, :final right):
+          final l = walk(left);
+          final r = walk(right);
+          final v = ev.eval(n);
+          steps.add('$l $op $r = ${_compact(v)}');
+          return _compact(v);
+        case CallNode(:final name, :final args):
+          final a = args.map(walk).join(', ');
+          final v = ev.eval(n);
+          steps.add('$name($a) = ${_compact(v)}');
+          return _compact(v);
+        case ConvertNode(:final value, :final unit):
+          final v = walk(value);
+          final res = ev.eval(n);
+          steps.add('$v → ${unit.id} = ${_compact(res)}');
+          return _compact(res);
+        case PercentOfNode(:final percent, :final of):
+          final p = walk(percent);
+          final o = walk(of);
+          final v = ev.eval(n);
+          steps.add('$p% of $o = ${_compact(v)}');
+          return _compact(v);
+      }
+    }
+
+    try {
+      walk(Parser.parseExpression(body, units));
+    } catch (_) {
+      return const [];
+    }
+    return steps.length >= 2 ? steps : const [];
+  }
+
+  String _compact(Value v) => formatValue(v);
+
   /// Two passes: the first collects values per tag so `total of #tag` can be
   /// answered on lines that appear above some of the tagged lines.
   List<LineResult> evaluate(List<String> lines) {

@@ -57,6 +57,27 @@ void main() {
     expect(find.byType(Sidebar), findsOneWidget);
   });
 
+  testWidgets('complex answers expose their steps', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editor, '(1+2)*3');
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('9'), findsOneWidget);
+
+    final plus = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byIcon(Icons.add),
+    );
+    expect(plus, findsOneWidget);
+    await tester.tap(plus);
+    await tester.pumpAndSettle();
+    expect(find.text('Steps'), findsOneWidget);
+    expect(find.textContaining('1 + 2 = 3'), findsOneWidget);
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

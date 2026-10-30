@@ -109,6 +109,15 @@ void main() {
     expect(one('30 celsius in fahrenheit'), '86 °F');
   });
 
+  test('step breakdown', () {
+    final steps = engine.explain('(2.5+7.5)*1.11/10-15^2');
+    expect(steps.first, '2.5 + 7.5 = 10');
+    expect(steps.last, '1.11 - 225 = -223.89');
+    expect(steps.length, 5);
+    expect(engine.explain('2 apples'), isEmpty);
+    expect(engine.explain('hello world'), isEmpty);
+  });
+
   test('text lines stay quiet', () {
     expect(one('hello world'), isNull);
   });
