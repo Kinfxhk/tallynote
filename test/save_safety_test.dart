@@ -63,4 +63,28 @@ void main() {
     expect(stored, isNot(contains('⋯')));
     await tester.pump(const Duration(seconds: 2));
   });
+
+  testWidgets('switching sheets inside the debounce keeps text apart', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await boot(tester);
+    await tester.enterText(editorField(), 'alpha 111');
+    await tester.pump(const Duration(milliseconds: 120)); // still inside 400 ms
+
+    // Ctrl+N: the sidebar's tap also awaits a haptic the test engine never
+    // answers, so the shortcut is the dependable way to switch sheets here
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.enterText(editorField(), 'beta 222');
+    await tester.pump(const Duration(milliseconds: 600));
+
+    final stored = (await storedContent()).values.toList();
+    expect(stored, hasLength(2), reason: 'no sheet is invented or merged');
+    expect(stored.where((c) => c == 'alpha 111'), hasLength(1));
+    expect(stored.where((c) => c == 'beta 222'), hasLength(1));
+    await tester.pump(const Duration(seconds: 2));
+  });
 }

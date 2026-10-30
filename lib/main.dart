@@ -33,7 +33,7 @@ class TallynoteApp extends StatefulWidget {
   State<TallynoteApp> createState() => _AppState();
 }
 
-class _AppState extends State<TallynoteApp> {
+class _AppState extends State<TallynoteApp> with WidgetsBindingObserver {
   final _store = DocumentStore();
   final _controller = MarkedController(dark: false);
   final _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -93,6 +93,7 @@ class _AppState extends State<TallynoteApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     HardwareKeyboard.instance.addHandler(_onKey);
     _engine = SheetEngine(rates: Rates.current);
     _controller.addListener(_onText);
@@ -192,11 +193,7 @@ class _AppState extends State<TallynoteApp> {
     final sheet = _store.active;
     if (sheet == null) return;
     // do not let a pending debounce land in the sheet we are opening
-    if ((_saveTimer?.isActive ?? false) && _boundSheetId != sheet.id) {
-      _saveTimer!.cancel();
-      _persist(_boundSheetId!, _contentToSave);
-      _dirty = false;
-    }
+    if (_boundSheetId != sheet.id) _flush();
     _boundSheetId = sheet.id;
     _syncing = true;
     _foldSource = null;
@@ -210,6 +207,22 @@ class _AppState extends State<TallynoteApp> {
   /// What the sheet actually contains: while a section is folded the editor
   /// shows a projection, so the saved text must come from the full source.
   String get _contentToSave => _foldSource?.join('\n') ?? _controller.text;
+
+  /// Write a pending debounce now, into the sheet it was typed in: a kill, a
+  /// hidden window or a sheet switch would otherwise drop it.
+  void _flush() {
+    if (!(_saveTimer?.isActive ?? false)) return;
+    _saveTimer!.cancel();
+    final id = _boundSheetId ?? _store.activeId;
+    if (id != null) _persist(id, _contentToSave);
+    _dirty = false;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // paused/detached may be the last callback before the process goes away
+    if (state != AppLifecycleState.resumed) _flush();
+  }
 
   void _persist(String id, String content) {
     final firstLine = content
@@ -292,9 +305,12 @@ class _AppState extends State<TallynoteApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKey);
+    // last chance: a pending debounce must land before the frame goes away
+    _store.removeListener(_onStore);
+    _flush();
     _zoomModifier.dispose();
-    _saveTimer?.cancel();
     _controller.dispose();
     _store.dispose();
     super.dispose();

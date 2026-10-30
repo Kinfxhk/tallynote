@@ -62,12 +62,17 @@ class Sheet {
 /// a few MB.
 class DocumentStore extends ChangeNotifier {
   static const _key = 'tallynote.sheets.v1';
+  static const _backupKey = 'tallynote.sheets.v1.bak';
   static const _activeKey = 'tallynote.active.v1';
 
   final List<Sheet> sheets = [];
   final List<Folder> folders = [];
   String? activeId;
   bool loaded = false;
+
+  /// The stored blob could not be read and a copy of it is in [_backupKey]:
+  /// nothing may write over the original until the user acts.
+  bool _keepBackup = false;
 
   Sheet? get active =>
       sheets.where((s) => s.id == activeId).firstOrNull ??
@@ -108,34 +113,42 @@ class DocumentStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw != null) {
+      // decode into locals first: a half-read document must not replace a
+      // whole one, or the next save keeps only the first few sheets
+      final nextFolders = <Folder>[];
+      final nextSheets = <Sheet>[];
       try {
         final decoded = jsonDecode(raw);
         if (decoded is List) {
           // v1: a bare list of sheets, no folders
-          sheets
-            ..clear()
-            ..addAll(
-              decoded.map((e) => Sheet.fromJson(e as Map<String, dynamic>)),
-            );
+          nextSheets.addAll(
+            decoded.map((e) => Sheet.fromJson(e as Map<String, dynamic>)),
+          );
         } else if (decoded is Map) {
           final m = decoded as Map<String, dynamic>;
-          folders
-            ..clear()
-            ..addAll(
-              (m['folders'] as List? ?? []).map(
-                (e) => Folder.fromJson(e as Map<String, dynamic>),
-              ),
-            );
-          sheets
-            ..clear()
-            ..addAll(
-              (m['sheets'] as List? ?? []).map(
-                (e) => Sheet.fromJson(e as Map<String, dynamic>),
-              ),
-            );
+          nextFolders.addAll(
+            (m['folders'] as List? ?? []).map(
+              (e) => Folder.fromJson(e as Map<String, dynamic>),
+            ),
+          );
+          nextSheets.addAll(
+            (m['sheets'] as List? ?? []).map(
+              (e) => Sheet.fromJson(e as Map<String, dynamic>),
+            ),
+          );
+        } else {
+          throw const FormatException('the store is not a document');
         }
-      } catch (_) {
-        // corrupt store: start clean rather than crash
+        folders
+          ..clear()
+          ..addAll(nextFolders);
+        sheets
+          ..clear()
+          ..addAll(nextSheets);
+      } catch (e) {
+        // keep the damaged blob: it may be the only copy of the user's text
+        _keepBackup = await prefs.setString(_backupKey, raw);
+        debugPrint('tallynote: unreadable store, kept in $_backupKey: $e');
       }
     }
     if (sheets.isEmpty) {
@@ -153,6 +166,8 @@ class DocumentStore extends ChangeNotifier {
   }
 
   Future<void> _persist() async {
+    // the backup is all that is left of the damaged store: do not bury it
+    if (_keepBackup) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _key,
