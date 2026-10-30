@@ -1,8 +1,12 @@
 # Tallynote
 
-**The notepad that adds up.** A Soulver/Numi-style calculator where every line of plain text is a calculation, and the answer sits quietly on the right.
+**The notepad that adds up.** Every line you type is a calculation; the answer sits on the right, aligned by its decimal point. Notes, drafts and totals live in the same page.
 
-Type what you mean. Tallynote parses it as you type:
+Offline first: nothing is computed in the cloud, and the page works with the network unplugged.
+
+**[Open the web app](https://kinfxhk.github.io/tallynote/)** · **[Download the Android APK](https://github.com/Kinfxhk/tallynote/releases/latest)**
+
+<img src="docs/android-formatting.png" width="300" alt="Tallynote on Android: a draft line, a bold line, and answers aligned on the decimal point">
 
 ```
 rent = 2500                    →  2,500
@@ -20,11 +24,22 @@ total of #trip                 →  6,830
 9 is to 16 as 27 is to what    →  48
 today + 2 weeks                →  13 November 2026
 3pm HKT in New York            →  3:00 AM
+6+3x30                         →  96
+30乘3                          →  90
 ```
 
-![Tallynote on Android](docs/android.png)
+## What it does
 
-Balance sheets work the same way — a `sum` per section, then one total:
+**Calculating**
+- Line-by-line answers; a broken line never breaks the page
+- Variables (`rent = 2500`), references (`prev`, `line 3`), `sum` / `average` / `count` per section
+- Percentages in plain words: `15% of 300`, `25% off 159.99`, `20 is what % of 80`, `5% of what is 150`
+- Units (length, mass, area, volume, speed, time, data, angle, temperature); mixed units convert on the fly
+- Currency with daily ECB rates, cached for offline use
+- Dates, durations and time zones; `if … then … else`; rule of three; compound interest
+- Functions in any shape people type them: `sin 30 deg`, `sin30deg`, `max(1, 9, 4)`, `round 3.14159 2`, `pi`
+
+**Totals that suit a balance sheet**
 
 ```
 # Assets
@@ -40,50 +55,67 @@ sum                          →  -520,000
 合共                          →  280,000
 ```
 
-The grand total only counts individual lines, never the subtotals above it, so
-nothing is counted twice.
+`grand total` / `合共` / `總共` adds every individual line above it — never the subtotals — and groups by unit when dimensions differ. Lines labelled *Total* / *Net* / *合計* are treated as summaries, so nothing is counted twice.
 
-## What it does
+**Reading real-world notes**
+- `Topstep: −$10,408.52` — the label stays out of the maths, the unicode minus keeps its sign, money keeps its cents
+- `// any line` becomes a draft: greyed, not calculated
+- `**bold**`, `_italic_`, `~~strike~~`, `__underline__`, `{red}colour{/}` — select text and use the small format bar; markers are plain text, so the file stays portable and the maths still works
 
-- **Line-by-line answers** — every line is evaluated independently; errors stay on their own line and never break the sheet.
-- **Natural language** — `plus`, `times`, `15% of`, `20% off`, `is what % of`, rule of three.
-- **Variables and references** — `total cost = $750`, `prev`, `line 3`. Change a value and every answer below updates.
-- **Aggregates** — `sum`, `average`, `count`, `min`, `max` per section.
-- **Tags and subtotals** — tag any line with `#food`, then `total of #food`.
-- **Grand total** — `grand total` / `合共` / `總共` adds every answer above the line, grouped by unit (`6.36 kg, 2 m` rather than a fake single number). Lines labelled *Total / Net / 合計* are treated as summaries and never counted twice.
-- **Paste-friendly** — `Topstep: −$10,408.52` keeps its label out of the way, the unicode minus keeps its sign, and money always shows cents.
-- **Units** — length, mass, area, volume, speed, time, data, angle, temperature; mixed units convert automatically (`5 kg + 3 lb`).
-- **Currency** — ISO codes and symbols, daily ECB rates via frankfurter.app, cached for offline use.
-- **Dates and time** — calendar math, durations, timezone conversion.
-- **Functions** — `sqrt`, `log`, `ln`, `sin`, `cos`, `round`, `fact`, `min`, `max`, and friends.
-- **Conditionals** — `if 5 > 3 then 10 else 20`.
+**Answers you can trust**
+- Press the chevron beside a complex answer to see every step:
 
-## Platforms
+```
+(2.5+7.5)*1.11/10-15^2
+    2.5 + 7.5 = 10
+    10 * 1.11 = 11.1
+    11.1 / 10 = 1.11
+    15 ^ 2 = 225
+    1.11 - 225 = -223.89
+```
 
-| Platform | Status |
-|---|---|
-| Android | built and tested |
-| Linux | built in CI |
-| Windows | built in CI |
-| Web | runs; used for UI preview |
-| macOS | project ready; not built (needs full Xcode) |
+- When a line is ambiguous the app shows nothing rather than a guess (an uppercase `X` is not a times sign)
 
-## Design notes
+## How it compares
 
-Paper and ink: no cards, no gradients, no chrome. Text on the left, answers right-aligned in tabular figures, one hairline rule where it helps.
+Honest notes: Soulver has integrations this project deliberately does not (Wolfram|Alpha, stocks, weather); Numi's prose parsing is far more mature. Tallynote's edge is being free, open source, offline, and on five surfaces at once.
 
-- **Collapse the sidebar** with `⌘\` / `Ctrl+\`
-- **Hide answers** for a clean writing surface with `⌘⇧A` / `Ctrl+Shift+A`
-- Sheets, theme and rates stay on the device; nothing leaves it except the daily rate fetch.
+| | **Tallynote** | Soulver 4 | Numi 3 | Notepad Calculator |
+|---|---|---|---|---|
+| Platforms | macOS, Windows, Linux, Android, Web | macOS, iPad, iPhone | macOS, Windows | Web |
+| Price | Free (MIT) | $59 one-time | Freemium, ~$20–30 | Free |
+| Open source | ✅ MIT | ❌ | ✅ source on GitHub | ✅ |
+| Works offline | ✅ built-in rates + cache | ✅ except live data | ✅ | ⚠️ needs a server |
+| Natural-language maths | ✅ plus Chinese operators (乘/除/加/減) | ✅ best in class | ✅ | ✅ |
+| Units & currency | ✅ ~150 units, daily ECB rates | ✅ 180+ units, live prices | ✅ | ✅ basic |
+| Variables & line references | ✅ | ✅ | ✅ | ✅ |
+| Dates & time zones | ✅ | ✅ | ✅ | ⚠️ limited |
+| Section subtotals & tags | ✅ `sum`, `total of #tag` | ✅ | ⚠️ `sum` only | ❌ |
+| Whole-sheet grand total | ✅ unit-aware | ✅ | ⚠️ | ❌ |
+| Step-by-step breakdown | ✅ | ❌ | ❌ | ❌ |
+| Inline bold / italic / colour | ✅ markers | ✅ rich text | ⚠️ limited | ❌ |
+| CLI / scripting | ❌ | ✅ | ✅ numi-cli | ❌ |
+| Wolfram, stocks, weather | ❌ by design | ✅ | ⚠️ | ❌ |
+
+## Design principles
+
+1. **Offline is correct.** No network call can change an answer. The only optional fetch is the daily rate refresh, and it can be switched off in Settings.
+2. **One meaning, one trigger.** A word belongs to exactly one feature; the precedence ladder and a machine-checked trigger registry keep new features from colliding.
+3. **No answer beats a wrong answer.**
+
+Everything that is not typing lives behind the settings sheet: answers column, dark mode, step chevrons, rate refresh. The header keeps two buttons.
 
 ## Build
 
 ```bash
 flutter pub get
 flutter test
-flutter run -d macos      # or android, linux, windows, chrome
+flutter run -d android     # or linux, windows, chrome
 flutter build apk --release
+flutter build web --release --base-href /tallynote/ --no-web-resources-cdn
 ```
+
+`--no-web-resources-cdn` matters: CanvasKit is served from the bundle, so opening the page touches no CDN. CI builds Android, Linux, Windows and Web on every push.
 
 ## License
 
