@@ -279,6 +279,7 @@ class _AppState extends State<TallynoteApp> {
                         _Header(
                           dark: _dark,
                           sidebarOpen: _sidebarOpen && wide,
+                          showMenu: !(wide && _sidebarOpen),
                           onMenu: wide
                               ? _toggleSidebar
                               : () => _scaffoldKey.currentState?.openDrawer(),
@@ -451,12 +452,17 @@ class _AppState extends State<TallynoteApp> {
 class _Header extends StatelessWidget {
   final bool dark;
   final bool sidebarOpen;
+
+  /// The sidebar carries its own collapse control, so the header only shows a
+  /// menu button when the sidebar is actually hidden.
+  final bool showMenu;
   final VoidCallback onMenu;
   final VoidCallback onSettings;
 
   const _Header({
     required this.dark,
     required this.sidebarOpen,
+    required this.showMenu,
     required this.onMenu,
     required this.onSettings,
   });
@@ -469,15 +475,13 @@ class _Header extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
-            IconButton(
-              iconSize: 18,
-              tooltip: 'Sheets  ⌘\\',
-              onPressed: onMenu,
-              icon: Icon(
-                sidebarOpen ? Icons.keyboard_double_arrow_left : Icons.menu,
-                color: Palette.faint(dark),
+            if (showMenu)
+              IconButton(
+                iconSize: 18,
+                tooltip: 'Sheets  ⌘\\',
+                onPressed: onMenu,
+                icon: Icon(Icons.menu, color: Palette.faint(dark)),
               ),
-            ),
             const Spacer(),
             _IconAction(
               icon: Icons.tune,

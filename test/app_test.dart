@@ -57,7 +57,8 @@ void main() {
     await boot(tester);
     expect(find.byType(Sidebar), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Sheets  ⌘\\').first);
+    // the sidebar owns its collapse control; the header only appears after
+    await tester.tap(find.byTooltip('Collapse sidebar  ⌘\\').first);
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.byType(Sidebar), findsNothing);
 
