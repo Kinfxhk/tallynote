@@ -22,6 +22,8 @@ today + 2 weeks                →  13 November 2026
 3pm HKT in New York            →  3:00 AM
 ```
 
+![Tallynote on Android](docs/android.png)
+
 ## What it does
 
 - **Line-by-line answers** — every line is evaluated independently; errors stay on their own line and never break the sheet.
