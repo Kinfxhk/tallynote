@@ -97,11 +97,16 @@ class SheetEngine {
       }
     }
 
-    try {
-      walk(Parser.parseExpression(body, units));
-    } catch (_) {
-      return const [];
+    // same read-past rule as evaluation, so a line that answers also explains
+    Node? node;
+    for (final candidate in _candidates(body).take(8)) {
+      try {
+        node = Parser.parseExpression(candidate, units);
+        break;
+      } catch (_) {}
     }
+    if (node == null) return const [];
+    walk(node);
     return steps.length >= 2 ? steps : const [];
   }
 

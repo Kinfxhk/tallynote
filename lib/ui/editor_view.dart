@@ -137,9 +137,9 @@ class _EditorViewState extends State<EditorView> {
     });
   }
 
+  /// Mirrors SheetEngine.explain: two or more operations is "complex".
   static bool _hasOperators(String line) =>
-      RegExp(r'[+\-*/^%×÷]|\b(乘|除|加|減|减)\b').hasMatch(line) ||
-      line.contains('乘') || line.contains('除') || line.contains('加') || line.contains('減');
+      RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
 
   Future<void> _openSteps(String line) async {
     final steps = widget.explain!(line);

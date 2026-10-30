@@ -116,6 +116,10 @@ void main() {
     expect(steps.length, 5);
     expect(engine.explain('2 apples'), isEmpty);
     expect(engine.explain('hello world'), isEmpty);
+    // one operation is not "complex" — no + button
+    expect(engine.explain('120 + 80'), isEmpty);
+    // prose prefix and tag are stripped, same read-past rule as answers
+    expect(engine.explain('午餐 120 + 80 * 2 #food').first, '80 * 2 = 160');
   });
 
   test('text lines stay quiet', () {
