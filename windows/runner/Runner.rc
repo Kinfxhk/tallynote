@@ -89,7 +89,7 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Tallynote" "\0"
+            VALUE "CompanyName", "KinFx" "\0"
             VALUE "FileDescription", "Tallynote - the notepad that adds up" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tallynote" "\0"

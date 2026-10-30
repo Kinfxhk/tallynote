@@ -95,10 +95,18 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
       - run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath tallynote-windows.zip
+      - name: Build installer
+        run: |
+          choco install innosetup -y --no-progress
+          $ver = (Select-String -Path pubspec.yaml -Pattern '^version: (.+?)\+').Matches[0].Groups[1].Value
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$ver" "packaging\windows\tallynote.iss"
+          echo "ver=$ver"
       - uses: actions/upload-artifact@v4
         with:
           name: tallynote-windows
-          path: tallynote-windows.zip
+          path: |
+            tallynote-windows.zip
+            build/installer/*.exe
 
   web:
     needs: test

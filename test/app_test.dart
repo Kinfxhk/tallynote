@@ -56,7 +56,7 @@ void main() {
     await tester.enterText(editor, '2+3*4');
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.textContaining('14'), findsOneWidget);
+    expect(answerExact('14'), findsOneWidget);
   });
 
   testWidgets('variables and sum work through the UI', (tester) async {
@@ -420,7 +420,7 @@ void main() {
     );
     await tester.enterText(editor, '2+3*4');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.textContaining('14'), findsOneWidget);
+    expect(answerExact('14'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Settings').first);
     await tester.pumpAndSettle();
@@ -429,6 +429,6 @@ void main() {
     // Appearance: dark mode, answers, sign colours
     await tester.tap(find.byKey(const ValueKey('switch-answers')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('14'), findsNothing);
+    expect(answerExact('14'), findsNothing);
   });
 }
