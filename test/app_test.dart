@@ -125,35 +125,64 @@ void main() {
     expect(colourOf('5'), Palette.positive(false));
   });
 
-  testWidgets('line numbers show and a dragged answer becomes a live reference',
-      (tester) async {
+  testWidgets(
+    'line numbers show and a dragged answer becomes a live reference',
+    (tester) async {
+      await boot(tester);
+      final editorFinder = find.descendant(
+        of: find.byType(EditorView),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(editorFinder, '2000+3000');
+      await tester.pump(const Duration(milliseconds: 60));
+
+      // gutter
+      expect(find.byKey(const ValueKey('gutter-1')), findsOneWidget);
+
+      // drag the answer onto the editor
+      final answer = find.textContaining('5,000').first;
+      await tester.drag(answer, Offset.zero); // no-op sanity
+      final g = await tester.startGesture(tester.getCenter(answer));
+      await tester.pump(const Duration(milliseconds: 50));
+      await g.moveBy(const Offset(-40, 20));
+      await tester.pump();
+      await g.moveTo(tester.getCenter(editorFinder));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<TextField>(editorFinder);
+      expect(field.controller!.text, contains('line 1'));
+      // the reference evaluates to the same number (answers + any drag chip)
+      expect(find.textContaining('5,000'), findsAtLeastNWidgets(2));
+    },
+  );
+
+  testWidgets('money keeps its cents and the dots align', (tester) async {
     await boot(tester);
-    final editorFinder = find.descendant(
+    final editor = find.descendant(
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    await tester.enterText(editorFinder, '2000+3000');
-    await tester.pump(const Duration(milliseconds: 60));
+    await tester.enterText(
+      editor,
+      r'$4,036.29'
+      '\n'
+      r'$1,251.90',
+    );
+    await tester.pump(const Duration(milliseconds: 80));
 
-    // gutter
-    expect(find.byKey(const ValueKey('gutter-1')), findsOneWidget);
+    // cents are never clipped away
+    expect(find.text(r'$4,036'), findsOneWidget);
+    expect(find.text('29'), findsOneWidget);
+    expect(find.text(r'$1,251'), findsOneWidget);
+    expect(find.text('90'), findsOneWidget);
 
-    // drag the answer onto the editor
-    final answer = find.textContaining('5,000').first;
-    await tester.drag(answer, Offset.zero); // no-op sanity
-    final g = await tester.startGesture(tester.getCenter(answer));
-    await tester.pump(const Duration(milliseconds: 50));
-    await g.moveBy(const Offset(-40, 20));
-    await tester.pump();
-    await g.moveTo(tester.getCenter(editorFinder));
-    await tester.pump();
-    await g.up();
-    await tester.pumpAndSettle();
-
-    final field = tester.widget<TextField>(editorFinder);
-    expect(field.controller!.text, contains('line 1'));
-    // the reference evaluates to the same number (answers + any drag chip)
-    expect(find.textContaining('5,000'), findsAtLeastNWidgets(2));
+    // both decimal points sit on one vertical line
+    final dots = find.text('.');
+    expect(dots, findsNWidgets(2));
+    final xs = List.generate(2, (i) => tester.getTopLeft(dots.at(i)).dx);
+    expect(xs[0], closeTo(xs[1], 0.6));
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {

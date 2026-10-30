@@ -12,6 +12,9 @@ class EvalContext {
   final Value? prev;
   final List<Value> above;
 
+  /// Line labels: the first word of an earlier line -> its answer.
+  final Map<String, Value> labels;
+
   EvalContext({
     required this.units,
     required this.now,
@@ -19,7 +22,9 @@ class EvalContext {
     Map<String, double>? rates,
     this.prev,
     List<Value>? above,
+    Map<String, Value>? labels,
   }) : vars = vars ?? {},
+       labels = labels ?? const {},
        rates = rates ?? const {'USD': 1},
        above = above ?? const [];
 }
@@ -79,6 +84,9 @@ class Evaluator {
     final key = name.toLowerCase();
     final v = ctx.vars[key];
     if (v != null) return v;
+    // a word that names an earlier line ("Tradeify", "午餐") is a reference
+    final named = ctx.labels[key];
+    if (named != null) return named;
     if (key == 'pi' || key == 'π') return NumValue(math.pi);
     if (key == 'e') return NumValue(math.e);
     if (key == 'tau' || key == 'τ') return NumValue(2 * math.pi);

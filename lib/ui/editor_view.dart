@@ -21,7 +21,7 @@ class EditorView extends StatefulWidget {
   final double answerWidth;
   final ValueChanged<double>? onAnswerWidth;
   final bool signColours;
-  final void Function(int line)? onInsertReference;
+  final void Function(int line, String token)? onInsertReference;
   final Color? positiveColour;
   final Color? negativeColour;
 
@@ -84,13 +84,11 @@ class _EditorViewState extends State<EditorView> {
         final text = widget.controller.text;
         final textWidth = constraints.maxWidth - answerW - gutterW - 48;
         final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
-        final metrics = _columnMetrics(
-          widget.results,
-          available: answerW - stepGutter - 10,
-        );
+        final metrics = _columnMetrics(widget.results);
 
         return DragTarget<int>(
-          onAcceptWithDetails: (d) => widget.onInsertReference?.call(d.data),
+          onAcceptWithDetails: (d) =>
+              widget.onInsertReference?.call(d.data, _tokenFor(d.data - 1)),
           builder: (context, candidate, rejected) => SingleChildScrollView(
             controller: _scroll,
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
@@ -147,7 +145,10 @@ class _EditorViewState extends State<EditorView> {
                       Positioned(
                         top: (tops.length > i ? tops[i] : 0),
                         right: 0,
-                        width: answerW,
+                        // never clip: the decimal grid needs its full width
+                        width: answerW < metrics.totalW + stepGutter
+                            ? metrics.totalW + stepGutter
+                            : answerW,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -188,7 +189,7 @@ class _EditorViewState extends State<EditorView> {
 
   /// Character counts needed to line the decimal points up. Widths are exact
   /// because the answer style is monospace with tabular figures.
-  _ColumnMetrics _columnMetrics(List<LineResult> results, {double? available}) {
+  _ColumnMetrics _columnMetrics(List<LineResult> results) {
     var maxHead = 0;
     var maxFrac = 0;
     for (final r in results) {
@@ -203,12 +204,6 @@ class _EditorViewState extends State<EditorView> {
       }
     }
     final charW = _charWidth();
-    // when the column is tight, drop decimals before shrinking the text
-    if (available != null) {
-      while (maxFrac > 0 && charW * (maxHead + 1 + maxFrac) > available) {
-        maxFrac--;
-      }
-    }
     return _ColumnMetrics(maxHead, maxFrac, charW);
   }
 
@@ -244,13 +239,17 @@ class _EditorViewState extends State<EditorView> {
     return Draggable<int>(
       data: i + 1,
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      feedback: _dragChip(i + 1, r.display!),
+      feedback: _dragChip(_tokenFor(i), r.display!),
       childWhenDragging: Opacity(opacity: 0.35, child: cell),
       child: cell,
     );
   }
 
-  Widget _dragChip(int line, String value) => Material(
+  /// A line's own word if it has one, otherwise its number.
+  String _tokenFor(int i) =>
+      SheetEngine.labelOf(widget.results[i].text) ?? 'line ${i + 1}';
+
+  Widget _dragChip(String token, String value) => Material(
     color: Colors.transparent,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -267,7 +266,7 @@ class _EditorViewState extends State<EditorView> {
         ],
       ),
       child: Text(
-        'line $line  ·  $value',
+        '$token  ·  $value',
         style: TextStyle(
           fontFamily: monoFamily,
           fontSize: 13,

@@ -116,10 +116,10 @@ class _AppState extends State<TallynoteApp> {
   }
 
   /// Dropping an answer appends a live reference; the engine keeps it fresh.
-  void _insertReference(int line) {
+  void _insertReference(int line, String token) {
     final base = _controller.text;
     final sep = base.isEmpty || base.endsWith('\n') ? '' : '\n';
-    final ref = 'line $line';
+    final ref = token;
     final text = '$base$sep$ref';
     _controller.value = TextEditingValue(
       text: text,

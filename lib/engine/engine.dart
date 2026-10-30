@@ -150,6 +150,7 @@ class SheetEngine {
     final results = <LineResult>[];
     final vars = <String, Value>{};
     final values = <Value?>[];
+    final labels = <String, Value>{};
     // answers that are not themselves totals, aligned with `values`.
     // A total must never count a subtotal on top of the lines it covers.
     final leafAt = <Value?>[];
@@ -201,6 +202,7 @@ class SheetEngine {
           tag: tag,
           tags: tags,
           leafAt: leafAt,
+          labels: labels,
         );
         values.add(value);
         leafAt.add(
@@ -210,6 +212,11 @@ class SheetEngine {
         );
         if (collect && tag != null && value != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
+        }
+        // the first word of a line names it for later references
+        final label = labelOf(body);
+        if (label != null && value != null && value is! ErrorValue) {
+          labels.putIfAbsent(label, () => value);
         }
         final bad = value is ErrorValue;
         results.add(
@@ -259,6 +266,17 @@ class SheetEngine {
   }
 
   // a line starting with '#' is a comment or heading; tags only count at the end
+  /// The first word of a line, used as its name for references.
+  /// "Tradeify: -$5,038.50" -> "tradeify"; "午餐 120" -> "午餐"; numbers -> null.
+  static String? labelOf(String line) {
+    final m = RegExp(r'^\s*([A-Za-z\u4e00-\u9fff][A-Za-z0-9_\u4e00-\u9fff]*)')
+        .firstMatch(line);
+    if (m == null) return null;
+    final word = m.group(1)!;
+    if (word.length < 2) return null;
+    return word.toLowerCase();
+  }
+
   static const _aggWords = {
     'sum',
     'total',
@@ -302,6 +320,7 @@ class SheetEngine {
     required int current,
     required Map<String, List<Value>> tags,
     required List<Value?> leafAt,
+    required Map<String, Value> labels,
     String? tag,
   }) {
     final ctx = EvalContext(
@@ -309,6 +328,7 @@ class SheetEngine {
       now: dates.now,
       vars: vars,
       rates: rates,
+      labels: labels,
     );
 
     // "Topstep: −$10,408.52" — a label in front of the value
