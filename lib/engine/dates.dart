@@ -18,45 +18,100 @@ class DateParser {
   }
 
   static const Map<String, String> zones = {
-    'hkt': 'Asia/Hong_Kong', 'hk': 'Asia/Hong_Kong',
-    'hongkong': 'Asia/Hong_Kong', '香港': 'Asia/Hong_Kong',
-    'utc': 'UTC', 'gmt': 'UTC',
-    'tokyo': 'Asia/Tokyo', 'jst': 'Asia/Tokyo', '東京': 'Asia/Tokyo',
-    'singapore': 'Asia/Singapore', 'sgt': 'Asia/Singapore',
-    'seoul': 'Asia/Seoul', 'kst': 'Asia/Seoul', '首爾': 'Asia/Seoul',
-    'shanghai': 'Asia/Shanghai', 'beijing': 'Asia/Shanghai',
-    'cst': 'Asia/Shanghai', '上海': 'Asia/Shanghai', '北京': 'Asia/Shanghai',
-    'taipei': 'Asia/Taipei', '台北': 'Asia/Taipei',
-    'bangkok': 'Asia/Bangkok', '曼谷': 'Asia/Bangkok',
-    'kualalumpur': 'Asia/Kuala_Lumpur', 'kl': 'Asia/Kuala_Lumpur',
-    'jakarta': 'Asia/Jakarta', 'manila': 'Asia/Manila',
-    'mumbai': 'Asia/Kolkata', 'delhi': 'Asia/Kolkata', 'ist': 'Asia/Kolkata',
+    'hkt': 'Asia/Hong_Kong',
+    'hk': 'Asia/Hong_Kong',
+    'hongkong': 'Asia/Hong_Kong',
+    '香港': 'Asia/Hong_Kong',
+    'utc': 'UTC',
+    'gmt': 'UTC',
+    'tokyo': 'Asia/Tokyo',
+    'jst': 'Asia/Tokyo',
+    '東京': 'Asia/Tokyo',
+    'singapore': 'Asia/Singapore',
+    'sgt': 'Asia/Singapore',
+    'seoul': 'Asia/Seoul',
+    'kst': 'Asia/Seoul',
+    '首爾': 'Asia/Seoul',
+    'shanghai': 'Asia/Shanghai',
+    'beijing': 'Asia/Shanghai',
+    'cst': 'Asia/Shanghai',
+    '上海': 'Asia/Shanghai',
+    '北京': 'Asia/Shanghai',
+    'taipei': 'Asia/Taipei',
+    '台北': 'Asia/Taipei',
+    'bangkok': 'Asia/Bangkok',
+    '曼谷': 'Asia/Bangkok',
+    'kualalumpur': 'Asia/Kuala_Lumpur',
+    'kl': 'Asia/Kuala_Lumpur',
+    'jakarta': 'Asia/Jakarta',
+    'manila': 'Asia/Manila',
+    'mumbai': 'Asia/Kolkata',
+    'delhi': 'Asia/Kolkata',
+    'ist': 'Asia/Kolkata',
     'dubai': 'Asia/Dubai',
-    'london': 'Europe/London', '倫敦': 'Europe/London',
-    'paris': 'Europe/Paris', '巴黎': 'Europe/Paris',
-    'berlin': 'Europe/Berlin', 'zurich': 'Europe/Zurich',
+    'london': 'Europe/London',
+    '倫敦': 'Europe/London',
+    'paris': 'Europe/Paris',
+    '巴黎': 'Europe/Paris',
+    'berlin': 'Europe/Berlin',
+    'zurich': 'Europe/Zurich',
     'moscow': 'Europe/Moscow',
-    'newyork': 'America/New_York', 'nyc': 'America/New_York',
-    'losangeles': 'America/Los_Angeles', 'la': 'America/Los_Angeles',
-    'sanfrancisco': 'America/Los_Angeles', 'sf': 'America/Los_Angeles',
-    'chicago': 'America/Chicago', 'toronto': 'America/Toronto',
+    'newyork': 'America/New_York',
+    'nyc': 'America/New_York',
+    'losangeles': 'America/Los_Angeles',
+    'la': 'America/Los_Angeles',
+    'sanfrancisco': 'America/Los_Angeles',
+    'sf': 'America/Los_Angeles',
+    'chicago': 'America/Chicago',
+    'toronto': 'America/Toronto',
     'vancouver': 'America/Vancouver',
-    'sydney': 'Australia/Sydney', 'melbourne': 'Australia/Melbourne',
+    'sydney': 'Australia/Sydney',
+    'melbourne': 'Australia/Melbourne',
     'auckland': 'Pacific/Auckland',
   };
 
   static const _months = {
-    'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
-    'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6, 'july': 7, 'jul': 7,
-    'august': 8, 'aug': 8, 'september': 9, 'sep': 9, 'sept': 9,
-    'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
-    'december': 12, 'dec': 12,
+    'january': 1,
+    'jan': 1,
+    'february': 2,
+    'feb': 2,
+    'march': 3,
+    'mar': 3,
+    'april': 4,
+    'apr': 4,
+    'may': 5,
+    'june': 6,
+    'jun': 6,
+    'july': 7,
+    'jul': 7,
+    'august': 8,
+    'aug': 8,
+    'september': 9,
+    'sep': 9,
+    'sept': 9,
+    'october': 10,
+    'oct': 10,
+    'november': 11,
+    'nov': 11,
+    'december': 12,
+    'dec': 12,
   };
 
   static const _weekdays = {
-    'monday': 1, 'mon': 1, 'tuesday': 2, 'tue': 2, 'wednesday': 3, 'wed': 3,
-    'thursday': 4, 'thu': 4, 'friday': 5, 'fri': 5, 'saturday': 6, 'sat': 6,
-    'sunday': 7, 'sun': 7,
+    'monday': 1,
+    'mon': 1,
+    'tuesday': 2,
+    'tue': 2,
+    'wednesday': 3,
+    'wed': 3,
+    'thursday': 4,
+    'thu': 4,
+    'friday': 5,
+    'fri': 5,
+    'saturday': 6,
+    'sat': 6,
+    'sunday': 7,
+    'sun': 7,
   };
 
   /// Splits a trailing timezone token, e.g. "3pm HKT" -> ("3pm", Asia/Hong_Kong).
@@ -83,8 +138,12 @@ class DateParser {
 
     if (lower == 'now') return base;
     if (lower == 'today') return _dateOnly(base);
-    if (lower == 'tomorrow') return _dateOnly(base.add(const Duration(days: 1)));
-    if (lower == 'yesterday') return _dateOnly(base.subtract(const Duration(days: 1)));
+    if (lower == 'tomorrow') {
+      return _dateOnly(base.add(const Duration(days: 1)));
+    }
+    if (lower == 'yesterday') {
+      return _dateOnly(base.subtract(const Duration(days: 1)));
+    }
 
     // next / last <weekday>
     final rel = RegExp(r'^(next|last|this)\s+([a-z]+)$').firstMatch(lower);
@@ -103,8 +162,8 @@ class DateParser {
 
     // ISO date, optional time
     final iso = RegExp(
-            r'^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$')
-        .firstMatch(s);
+      r'^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$',
+    ).firstMatch(s);
     if (iso != null) {
       return DateTime(
         int.parse(iso.group(1)!),
@@ -150,8 +209,13 @@ class DateParser {
     if (m3 != null && _months.containsKey(m3.group(1)!)) {
       final time = _parseTime(m3.group(3)!);
       if (time != null) {
-        return DateTime(base.year, _months[m3.group(1)!]!,
-            int.parse(m3.group(2)!), time.$1, time.$2);
+        return DateTime(
+          base.year,
+          _months[m3.group(1)!]!,
+          int.parse(m3.group(2)!),
+          time.$1,
+          time.$2,
+        );
       }
     }
 
@@ -159,7 +223,8 @@ class DateParser {
   }
 
   (int, int)? _parseTime(String s) {
-    final m = RegExp(r'^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$').firstMatch(s.trim());
+    final m = RegExp(r'^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$')
+        .firstMatch(s.trim());
     if (m == null) return null;
     var h = int.parse(m.group(1)!);
     final min = m.group(2) == null ? 0 : int.parse(m.group(2)!);
@@ -173,14 +238,16 @@ class DateParser {
   /// "2 weeks 3 days", "90 minutes"
   Duration? parseDuration(String input) {
     final re = RegExp(
-        r'(\d+(?:\.\d+)?)\s*(years?|months?|weeks?|days?|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b');
+      r'(\d+(?:\.\d+)?)\s*(years?|months?|weeks?|days?|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b',
+    );
     final matches = re.allMatches(input.toLowerCase());
     if (matches.isEmpty) return null;
     var total = 0.0;
     for (final m in matches) {
       final n = double.parse(m.group(1)!);
       final unit = m.group(2)!;
-      total += n *
+      total +=
+          n *
           switch (unit) {
             'year' || 'years' => 365 * 86400.0,
             'month' || 'months' => 30 * 86400.0,
@@ -200,8 +267,13 @@ class DateParser {
     try {
       final loc = tz.getLocation(zoneName);
       final converted = tz.TZDateTime.from(local, loc);
-      return DateTime(converted.year, converted.month, converted.day,
-          converted.hour, converted.minute);
+      return DateTime(
+        converted.year,
+        converted.month,
+        converted.day,
+        converted.hour,
+        converted.minute,
+      );
     } catch (_) {
       return local;
     }
@@ -212,15 +284,27 @@ class DateParser {
     try {
       final from = tz.getLocation(fromZone);
       final to = tz.getLocation(toZone);
-      final source = tz.TZDateTime(from, dt.year, dt.month, dt.day, dt.hour, dt.minute);
+      final source = tz.TZDateTime(
+        from,
+        dt.year,
+        dt.month,
+        dt.day,
+        dt.hour,
+        dt.minute,
+      );
       final target = tz.TZDateTime.from(source.toUtc(), to);
-      return DateTime(target.year, target.month, target.day, target.hour,
-          target.minute);
+      return DateTime(
+        target.year,
+        target.month,
+        target.day,
+        target.hour,
+        target.minute,
+      );
     } catch (_) {
       return null;
     }
   }
 
-  static String? zoneFor(String token) => zones[
-      token.toLowerCase().replaceAll(RegExp(r'\s+'), '').trim()];
+  static String? zoneFor(String token) =>
+      zones[token.toLowerCase().replaceAll(RegExp(r'\s+'), '').trim()];
 }

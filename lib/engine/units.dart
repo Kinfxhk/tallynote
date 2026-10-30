@@ -17,19 +17,22 @@ class Unit {
   bool get isTemperature => dims.length == 1 && dims.containsKey('temp');
 
   Unit operator /(Unit other) => Unit(
-        '$id/${other.id}',
-        _combine(dims, other.dims, -1),
-        factor / other.factor,
-      );
+    '$id/${other.id}',
+    _combine(dims, other.dims, -1),
+    factor / other.factor,
+  );
 
   Unit operator *(Unit other) => Unit(
-        '$id·${other.id}',
-        _combine(dims, other.dims, 1),
-        factor * other.factor,
-      );
+    '$id·${other.id}',
+    _combine(dims, other.dims, 1),
+    factor * other.factor,
+  );
 
   static Map<String, int> _combine(
-      Map<String, int> a, Map<String, int> b, int sign) {
+    Map<String, int> a,
+    Map<String, int> b,
+    int sign,
+  ) {
     final out = <String, int>{...a};
     b.forEach((k, v) {
       final n = (out[k] ?? 0) + sign * v;
@@ -58,8 +61,7 @@ class UnitDef {
   final double factor;
   final double offset;
 
-  const UnitDef(this.id, this.names, this.dim, this.factor,
-      {this.offset = 0});
+  const UnitDef(this.id, this.names, this.dim, this.factor, {this.offset = 0});
 }
 
 /// Base units: m, kg, s, byte, K, rad, m2, m3, J, Pa, W, Hz, L, mol.
@@ -131,12 +133,16 @@ const List<UnitDef> _defs = [
 
   // angle (base: radian)
   UnitDef('rad', ['rad', 'radian', 'radians'], 'angle', 1),
-  UnitDef('deg', ['deg', 'degree', 'degrees', '°'], 'angle', 0.017453292519943295),
+  UnitDef(
+    'deg',
+    ['deg', 'degree', 'degrees', '°'],
+    'angle',
+    0.017453292519943295,
+  ),
 
   // temperature (base: kelvin)
   UnitDef('C', ['c', 'celsius', '°c', '攝氏'], 'temp', 1, offset: 273.15),
-  UnitDef('F', ['f', 'fahrenheit', '°f', '華氏'], 'temp', 5 / 9,
-      offset: 459.67),
+  UnitDef('F', ['f', 'fahrenheit', '°f', '華氏'], 'temp', 5 / 9, offset: 459.67),
   UnitDef('K', ['k', 'kelvin'], 'temp', 1),
 
   // energy / power / pressure / frequency

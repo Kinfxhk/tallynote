@@ -22,31 +22,39 @@ class MarkedController extends TextEditingController {
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
       if (Fmt.isDraft(line)) {
-        children.add(TextSpan(
-          text: line,
-          style: base.copyWith(
-            color: Palette.faint(dark),
-            fontStyle: FontStyle.italic,
+        children.add(
+          TextSpan(
+            text: line,
+            style: base.copyWith(
+              color: Palette.faint(dark),
+              fontStyle: FontStyle.italic,
+            ),
           ),
-        ));
+        );
       } else {
         children.addAll(Fmt.spans(line, base));
       }
       if (i < lines.length - 1) children.add(TextSpan(text: '\n', style: base));
     }
 
-    if (withComposing && value.composing.isValid && !value.composing.isCollapsed) {
+    if (withComposing &&
+        value.composing.isValid &&
+        !value.composing.isCollapsed) {
       // keep the IME's composing range visible while typing Chinese
       final start = value.composing.start.clamp(0, text.length);
       final end = value.composing.end.clamp(0, text.length);
-      return TextSpan(style: base, children: [
-        ...children.take(0),
-        TextSpan(text: text.substring(0, start), style: base),
-        TextSpan(
+      return TextSpan(
+        style: base,
+        children: [
+          ...children.take(0),
+          TextSpan(text: text.substring(0, start), style: base),
+          TextSpan(
             text: text.substring(start, end),
-            style: base.copyWith(decoration: TextDecoration.underline)),
-        TextSpan(text: text.substring(end), style: base),
-      ]);
+            style: base.copyWith(decoration: TextDecoration.underline),
+          ),
+          TextSpan(text: text.substring(end), style: base),
+        ],
+      );
     }
 
     return TextSpan(style: base, children: children);

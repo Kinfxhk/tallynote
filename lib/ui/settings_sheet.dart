@@ -29,39 +29,47 @@ Future<void> showSettingsSheet({
     isScrollControlled: true,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setSheet) {
-        Widget row(String label, String hint, Widget trailing,
-                {VoidCallback? onTap}) =>
-            InkWell(
-              onTap: onTap,
-              child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(label,
-                            style: TextStyle(
-                                fontSize: 14, color: Palette.fg(dark))),
-                        const SizedBox(height: 2),
-                        Text(hint,
-                            style: TextStyle(
-                                fontSize: 11.5, color: Palette.faint(dark))),
-                      ],
-                    ),
+        Widget row(
+          String label,
+          String hint,
+          Widget trailing, {
+          VoidCallback? onTap,
+        }) => InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(fontSize: 14, color: Palette.fg(dark)),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        hint,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Palette.faint(dark),
+                        ),
+                      ),
+                    ],
                   ),
-                  trailing,
-                ],
-              ),
+                ),
+                trailing,
+              ],
             ),
-            );
+          ),
+        );
 
         Switch plus(bool value, ValueChanged<bool> onChanged) => Switch(
-              value: value,
-              onChanged: onChanged,
-              activeThumbColor: Palette.answer(dark),
-            );
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: Palette.answer(dark),
+        );
 
         return SafeArea(
           child: Padding(
@@ -72,44 +80,58 @@ Future<void> showSettingsSheet({
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                  child: Text('Settings',
-                      style: TextStyle(
-                        fontSize: 13,
-                        letterSpacing: 0.4,
-                        fontWeight: FontWeight.w600,
-                        color: Palette.faint(dark),
-                      )),
+                  child: Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontSize: 13,
+                      letterSpacing: 0.4,
+                      fontWeight: FontWeight.w600,
+                      color: Palette.faint(dark),
+                    ),
+                  ),
                 ),
-                row('Answers', 'Show the result column',
-                    plus(localAnswers, (v) {
-                  localAnswers = v;
-                  onAnswers(v);
-                  setSheet(() {});
-                }), onTap: () {
-                  localAnswers = !localAnswers;
-                  onAnswers(localAnswers);
-                  setSheet(() {});
-                }),
-                row('Dark mode', 'Paper is light, ink is dark',
-                    plus(localDark, (v) {
-                  localDark = v;
-                  onTheme(v);
-                  setSheet(() {});
-                }), onTap: () {
-                  localDark = !localDark;
-                  onTheme(localDark);
-                  setSheet(() {});
-                }),
-                row('Step breakdown', 'Show a + next to complex answers',
-                    plus(localSteps, (v) {
-                  localSteps = v;
-                  onSteps(v);
-                  setSheet(() {});
-                }), onTap: () {
-                  localSteps = !localSteps;
-                  onSteps(localSteps);
-                  setSheet(() {});
-                }),
+                row(
+                  'Answers',
+                  'Show the result column',
+                  plus(localAnswers, (v) {
+                    localAnswers = v;
+                    onAnswers(v);
+                    setSheet(() {});
+                  }),
+                  onTap: () {
+                    localAnswers = !localAnswers;
+                    onAnswers(localAnswers);
+                    setSheet(() {});
+                  },
+                ),
+                row(
+                  'Dark mode',
+                  'Paper is light, ink is dark',
+                  plus(localDark, (v) {
+                    localDark = v;
+                    onTheme(v);
+                    setSheet(() {});
+                  }),
+                  onTap: () {
+                    localDark = !localDark;
+                    onTheme(localDark);
+                    setSheet(() {});
+                  },
+                ),
+                row(
+                  'Step breakdown',
+                  'Show steps beside complex answers',
+                  plus(localSteps, (v) {
+                    localSteps = v;
+                    onSteps(v);
+                    setSheet(() {});
+                  }),
+                  onTap: () {
+                    localSteps = !localSteps;
+                    onSteps(localSteps);
+                    setSheet(() {});
+                  },
+                ),
                 row(
                   'Auto-refresh rates',
                   'Once a day when a network is available',
@@ -137,13 +159,18 @@ Future<void> showSettingsSheet({
                       if (!ok && ctx.mounted) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
                           const SnackBar(
-                              content: Text('Offline — kept the last rates')),
+                            content: Text('Offline — kept the last rates'),
+                          ),
                         );
                       }
                     },
-                    child: Text('Refresh',
-                        style: TextStyle(
-                            fontSize: 13, color: Palette.answer(dark))),
+                    child: Text(
+                      'Refresh',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Palette.answer(dark),
+                      ),
+                    ),
                   ),
                 ),
                 Padding(
@@ -153,7 +180,10 @@ Future<void> showSettingsSheet({
                     'thing that ever uses the network, and only when they are '
                     'stale.',
                     style: TextStyle(
-                        fontSize: 11, height: 1.5, color: Palette.faint(dark)),
+                      fontSize: 11,
+                      height: 1.5,
+                      color: Palette.faint(dark),
+                    ),
                   ),
                 ),
               ],

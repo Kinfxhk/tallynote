@@ -137,10 +137,8 @@ class _AppState extends State<TallynoteApp> {
   void _format(String open, String close) {
     final sel = _controller.selection;
     if (!_hasSelection) return;
-    final (text, selection) =
-        Fmt.wrap(_controller.text, sel, open, close);
-    _controller.value =
-        TextEditingValue(text: text, selection: selection);
+    final (text, selection) = Fmt.wrap(_controller.text, sel, open, close);
+    _controller.value = TextEditingValue(text: text, selection: selection);
   }
 
   @override
@@ -166,13 +164,19 @@ class _AppState extends State<TallynoteApp> {
               _toggleSidebar,
           const SingleActivator(LogicalKeyboardKey.backslash, control: true):
               _toggleSidebar,
-          const SingleActivator(LogicalKeyboardKey.keyA,
-              meta: true, shift: true): () {
+          const SingleActivator(
+            LogicalKeyboardKey.keyA,
+            meta: true,
+            shift: true,
+          ): () {
             setState(() => _answersVisible = !_answersVisible);
             _saveSettings();
           },
-          const SingleActivator(LogicalKeyboardKey.keyA,
-              control: true, shift: true): () {
+          const SingleActivator(
+            LogicalKeyboardKey.keyA,
+            control: true,
+            shift: true,
+          ): () {
             setState(() => _answersVisible = !_answersVisible);
             _saveSettings();
           },
@@ -234,10 +238,7 @@ class _AppState extends State<TallynoteApp> {
                         ),
                         Divider(height: 1, color: Palette.hairline(_dark)),
                         if (_hasSelection)
-                          _FormatBar(
-                            dark: _dark,
-                            onFormat: _format,
-                          ),
+                          _FormatBar(dark: _dark, onFormat: _format),
                         Expanded(
                           child: EditorView(
                             controller: _controller,
@@ -251,8 +252,9 @@ class _AppState extends State<TallynoteApp> {
                         _StatusBar(
                           dark: _dark,
                           lines: _controller.text.split('\n').length,
-                          answers:
-                              _results.where((r) => r.display != null).length,
+                          answers: _results
+                              .where((r) => r.display != null)
+                              .length,
                         ),
                       ],
                     ),
@@ -357,11 +359,15 @@ class _StatusBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text('$lines lines · $answers answers',
-              style: TextStyle(fontSize: 11, color: Palette.faint(dark))),
+          Text(
+            '$lines lines · $answers answers',
+            style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+          ),
           const Spacer(),
-          Text('rates $rateDate',
-              style: TextStyle(fontSize: 11, color: Palette.faint(dark))),
+          Text(
+            'rates $rateDate',
+            style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+          ),
         ],
       ),
     );
@@ -396,8 +402,18 @@ class _FormatBar extends StatelessWidget {
           const SizedBox(width: 8),
           btn('B', base.copyWith(fontWeight: FontWeight.w700), '**', '**'),
           btn('I', base.copyWith(fontStyle: FontStyle.italic), '_', '_'),
-          btn('S', base.copyWith(decoration: TextDecoration.lineThrough), '~~', '~~'),
-          btn('U', base.copyWith(decoration: TextDecoration.underline), '__', '__'),
+          btn(
+            'S',
+            base.copyWith(decoration: TextDecoration.lineThrough),
+            '~~',
+            '~~',
+          ),
+          btn(
+            'U',
+            base.copyWith(decoration: TextDecoration.underline),
+            '__',
+            '__',
+          ),
           const SizedBox(width: 6),
           for (final entry in Fmt.colours.entries)
             InkWell(
@@ -415,8 +431,10 @@ class _FormatBar extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          Text('selection',
-              style: TextStyle(fontSize: 10, color: Palette.faint(dark))),
+          Text(
+            'selection',
+            style: TextStyle(fontSize: 10, color: Palette.faint(dark)),
+          ),
           const SizedBox(width: 10),
         ],
       ),

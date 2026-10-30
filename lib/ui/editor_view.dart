@@ -61,89 +61,98 @@ class _EditorViewState extends State<EditorView> {
   @override
   Widget build(BuildContext context) {
     final style = editorStyle(widget.dark);
-    const stepGutter = 16.0;
-    final answerW = widget.answersVisible ? 196.0 : 0.0;
+    const stepGutter = 30.0; // finger-sized, but the icon stays small
+    final answerW = widget.answersVisible ? 212.0 : 0.0;
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final text = widget.controller.text;
-      final textWidth = constraints.maxWidth - answerW - 48;
-      final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
-      final metrics = _columnMetrics(widget.results);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final text = widget.controller.text;
+        final textWidth = constraints.maxWidth - answerW - 48;
+        final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
+        final metrics = _columnMetrics(widget.results);
 
-      return SingleChildScrollView(
-        controller: _scroll,
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(right: answerW),
-              child: TextField(
-                controller: widget.controller,
-                maxLines: null,
-                style: style,
-                strutStyle: StrutStyle(
-                  fontFamily: monoFamily,
-                  fontSize: 15,
-                  height: 28 / 15,
-                  forceStrutHeight: true,
+        return SingleChildScrollView(
+          controller: _scroll,
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(right: answerW),
+                child: TextField(
+                  controller: widget.controller,
+                  maxLines: null,
+                  style: style,
+                  strutStyle: StrutStyle(
+                    fontFamily: monoFamily,
+                    fontSize: 15,
+                    height: 28 / 15,
+                    forceStrutHeight: true,
+                  ),
+                  cursorColor: Palette.answer(widget.dark),
+                  cursorWidth: 1.6,
+                  decoration: const InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    hintText: 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
+                  ),
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.none,
+                  autocorrect: false,
+                  enableSuggestions: false,
                 ),
-                cursorColor: Palette.answer(widget.dark),
-                cursorWidth: 1.6,
-                decoration: const InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  hintText: 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
-                ),
-                keyboardType: TextInputType.multiline,
-                textCapitalization: TextCapitalization.none,
-                autocorrect: false,
-                enableSuggestions: false,
               ),
-            ),
-            if (widget.answersVisible)
-              for (var i = 0; i < widget.results.length; i++)
-                if (widget.results[i].display != null)
-                  Positioned(
-                    top: (tops.length > i ? tops[i] : 0),
-                    right: 0,
-                    width: answerW,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // the step marker lives in its own gutter so numbers
-                        // never move because of it
-                        SizedBox(
-                          width: stepGutter,
-                          child: (widget.showSteps &&
-                                  widget.explain != null &&
-                                  _hasOperators(widget.results[i].text))
-                              ? _StepButton(
-                                  dark: widget.dark,
-                                  onTap: () =>
-                                      _openSteps(widget.results[i].text),
-                                )
-                              : null,
-                        ),
-                        IgnorePointer(
-                          child: _AnswerCell(
+              if (widget.answersVisible)
+                for (var i = 0; i < widget.results.length; i++)
+                  if (widget.results[i].display != null)
+                    Positioned(
+                      top: (tops.length > i ? tops[i] : 0),
+                      right: 0,
+                      width: answerW,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // the step marker lives in its own gutter so numbers
+                          // never move because of it
+                          SizedBox(
+                            width: stepGutter,
+                            height: 28,
+                            child:
+                                (widget.showSteps &&
+                                    widget.explain != null &&
+                                    _hasOperators(widget.results[i].text))
+                                ? _StepButton(
+                                    dark: widget.dark,
+                                    onTap: () =>
+                                        _openSteps(widget.results[i].text),
+                                  )
+                                : null,
+                          ),
+                          _tapForSteps(
+                            line: widget.results[i].text,
+                            canExplain:
+                                widget.showSteps &&
+                                widget.explain != null &&
+                                _hasOperators(widget.results[i].text),
+                            child: _AnswerCell(
                               display: widget.results[i].display!,
                               style: answerStyle(widget.dark).copyWith(
                                 color: widget.results[i].error != null
                                     ? Palette.answer(widget.dark)
-                                        .withValues(alpha: 0.6)
+                                          .withValues(alpha: 0.6)
                                     : null,
                               ),
-                            metrics: metrics,
+                              metrics: metrics,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-          ],
-        ),
-      );
-    });
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Character counts needed to line the decimal points up. Widths are exact
@@ -181,6 +190,21 @@ class _EditorViewState extends State<EditorView> {
   static bool _hasOperators(String line) =>
       RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
 
+  /// The whole answer cell is the tap target on phones — the chevron is a
+  /// hint, not a 16px button.
+  Widget _tapForSteps({
+    required String line,
+    required bool canExplain,
+    required Widget child,
+  }) {
+    if (!canExplain) return IgnorePointer(child: child);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openSteps(line),
+      child: child,
+    );
+  }
+
   Future<void> _openSteps(String line) async {
     final steps = widget.explain!(line);
     if (!mounted) return;
@@ -208,18 +232,19 @@ class _EditorViewState extends State<EditorView> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                SelectableText(
-                  steps.join('\n'),
-                  style: editStyle(),
-                ),
+                SelectableText(steps.join('\n'), style: editStyle()),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text('Close',
-                        style: TextStyle(
-                            fontSize: 13, color: Palette.answer(widget.dark))),
+                    child: Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Palette.answer(widget.dark),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -231,11 +256,11 @@ class _EditorViewState extends State<EditorView> {
   }
 
   TextStyle editStyle() => TextStyle(
-        fontFamily: monoFamily,
-        fontSize: 13.5,
-        height: 1.7,
-        color: Palette.fg(widget.dark),
-      );
+    fontFamily: monoFamily,
+    fontSize: 13.5,
+    height: 1.7,
+    color: Palette.fg(widget.dark),
+  );
 
   /// Vertical offset of each logical line, honouring soft wraps.
   List<double> _lineTops(String text, TextStyle style, double width) {
@@ -254,7 +279,9 @@ class _EditorViewState extends State<EditorView> {
     var offset = 0;
     for (final line in text.split('\n')) {
       final caret = painter.getOffsetForCaret(
-          TextPosition(offset: offset), Rect.zero);
+        TextPosition(offset: offset),
+        Rect.zero,
+      );
       tops.add(caret.dy);
       offset += line.length + 1;
     }
@@ -270,12 +297,20 @@ class _StepButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 4),
-        child: Icon(Icons.chevron_right, size: 14, color: Palette.faint(dark)),
+    // the whole gutter cell is tappable; only the glyph is small
+    return Semantics(
+      button: true,
+      label: 'Show steps',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox.expand(
+          child: Icon(
+            Icons.chevron_right,
+            size: 16,
+            color: Palette.faint(dark),
+          ),
+        ),
       ),
     );
   }
@@ -305,17 +340,22 @@ class _AnswerCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dot = display.lastIndexOf('.');
-    final hasFrac = dot > 0 &&
+    final hasFrac =
+        dot > 0 &&
         display.length - dot - 1 <= metrics.maxFrac &&
         RegExp(r'^\d+$').hasMatch(display.substring(dot + 1));
     // plain integers belong in the grid too: their decimal point is implied
-    final isInteger =
-        dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
+    final isInteger = dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
     if (!hasFrac && !isInteger) {
       return SizedBox(
         width: metrics.totalW,
-        child: Text(display,
-            textAlign: TextAlign.right, maxLines: 1, softWrap: false, style: style),
+        child: Text(
+          display,
+          textAlign: TextAlign.right,
+          maxLines: 1,
+          softWrap: false,
+          style: style,
+        ),
       );
     }
 
@@ -328,11 +368,13 @@ class _AnswerCell extends StatelessWidget {
         children: [
           SizedBox(
             width: metrics.headW,
-            child: Text(head,
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                softWrap: false,
-                style: style),
+            child: Text(
+              head,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              softWrap: false,
+              style: style,
+            ),
           ),
           SizedBox(
             width: metrics.charW,

@@ -23,20 +23,20 @@ class Palette {
 const monoFamily = 'monospace';
 
 TextStyle editorStyle(bool dark) => TextStyle(
-      fontFamily: monoFamily,
-      fontSize: 15,
-      height: 28 / 15,
-      color: Palette.fg(dark),
-      letterSpacing: 0.1,
-    );
+  fontFamily: monoFamily,
+  fontSize: 15,
+  height: 28 / 15,
+  color: Palette.fg(dark),
+  letterSpacing: 0.1,
+);
 
 TextStyle answerStyle(bool dark) => TextStyle(
-      fontFamily: monoFamily,
-      fontSize: 15,
-      height: 28 / 15,
-      color: Palette.answer(dark),
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+  fontFamily: monoFamily,
+  fontSize: 15,
+  height: 28 / 15,
+  color: Palette.answer(dark),
+  fontFeatures: const [FontFeature.tabularFigures()],
+);
 
 ThemeData buildTheme(bool dark) {
   final fg = Palette.fg(dark);
@@ -49,9 +49,9 @@ ThemeData buildTheme(bool dark) {
       brightness: dark ? Brightness.dark : Brightness.light,
       surface: Palette.bg(dark),
     ),
-    textTheme: ThemeData(
-      brightness: dark ? Brightness.dark : Brightness.light,
-    ).textTheme.apply(bodyColor: fg, displayColor: fg),
+    textTheme: ThemeData(brightness: dark ? Brightness.dark : Brightness.light)
+        .textTheme
+        .apply(bodyColor: fg, displayColor: fg),
     dividerColor: Palette.hairline(dark),
     splashFactory: NoSplash.splashFactory,
   );

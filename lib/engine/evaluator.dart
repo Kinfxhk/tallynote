@@ -19,9 +19,9 @@ class EvalContext {
     Map<String, double>? rates,
     this.prev,
     List<Value>? above,
-  })  : vars = vars ?? {},
-        rates = rates ?? const {'USD': 1},
-        above = above ?? const [];
+  }) : vars = vars ?? {},
+       rates = rates ?? const {'USD': 1},
+       above = above ?? const [];
 }
 
 class Evaluator {
@@ -32,7 +32,9 @@ class Evaluator {
   Value eval(Node node) {
     switch (node) {
       case NumberNode(:final value, :final unit):
-        if (unit != null && unit.dims.length == 1 && unit.dims.containsKey('currency')) {
+        if (unit != null &&
+            unit.dims.length == 1 &&
+            unit.dims.containsKey('currency')) {
           return MoneyValue(value, unit.id);
         }
         return NumValue(value, unit);
@@ -49,7 +51,9 @@ class Evaluator {
         if (v is NumValue) {
           return NumValue(op == '-' ? -v.value : v.value, v.unit);
         }
-        if (v is MoneyValue && op == '-') return MoneyValue(-v.value, v.currency);
+        if (v is MoneyValue && op == '-') {
+          return MoneyValue(-v.value, v.currency);
+        }
         return const ErrorValue('bad unary');
       case BinNode(:final op, :final left, :final right):
         return _binary(op, eval(left), eval(right));
@@ -98,7 +102,9 @@ class Evaluator {
     if (op == '+' || op == '-') {
       final sum = _addSub(l, r, op == '-' ? -1 : 1);
       if (sum != null) return sum;
-      if (l is String || r is String) return const ErrorValue('cannot add text');
+      if (l is String || r is String) {
+        return const ErrorValue('cannot add text');
+      }
       return const ErrorValue('incompatible values');
     }
 
@@ -144,7 +150,9 @@ class Evaluator {
       }
       if (l is MoneyValue && r is MoneyValue) {
         final rr = _toCurrency(r, l.currency);
-        if (rr == null || rr.value == 0) return const ErrorValue('bad division');
+        if (rr == null || rr.value == 0) {
+          return const ErrorValue('bad division');
+        }
         return NumValue(l.value / rr.value);
       }
       return const ErrorValue('cannot divide');
@@ -185,8 +193,10 @@ class Evaluator {
     if (l is DateValue) {
       final d = _asDuration(r);
       if (d != null) {
-        return DateValue(l.date.add(Duration(seconds: (sign * d).round())),
-            hasTime: l.hasTime || _hasTimePart(d));
+        return DateValue(
+          l.date.add(Duration(seconds: (sign * d).round())),
+          hasTime: l.hasTime || _hasTimePart(d),
+        );
       }
       if (r is DateValue && sign < 0) {
         final diff = l.date.difference(r.date).inSeconds;
@@ -208,7 +218,9 @@ class Evaluator {
 
   double? _asDuration(Value v) {
     if (v is DurationValue) return v.seconds;
-    if (v is NumValue && v.unit != null && v.unit!.dims.length == 1 &&
+    if (v is NumValue &&
+        v.unit != null &&
+        v.unit!.dims.length == 1 &&
         v.unit!.dims.containsKey('time')) {
       return v.value * v.unit!.factor;
     }
@@ -223,7 +235,11 @@ class Evaluator {
 
   Unit? _divUnit(Unit? a, Unit? b) {
     if (b == null) return a;
-    if (a == null) return Unit('1/${b.id}', {for (final e in b.dims.entries) e.key: -e.value}, 1 / b.factor);
+    if (a == null) {
+      return Unit('1/${b.id}', {
+        for (final e in b.dims.entries) e.key: -e.value,
+      }, 1 / b.factor);
+    }
     return a / b;
   }
 
@@ -297,23 +313,37 @@ class Evaluator {
     switch (name) {
       case 'sqrt':
         final v = n(0);
-        return v == null ? const ErrorValue('sqrt needs a number') : NumValue(math.sqrt(v));
+        return v == null
+            ? const ErrorValue('sqrt needs a number')
+            : NumValue(math.sqrt(v));
       case 'cbrt':
         final v = n(0);
-        return v == null ? const ErrorValue('cbrt needs a number') : NumValue(math.pow(v, 1 / 3).toDouble());
+        return v == null
+            ? const ErrorValue('cbrt needs a number')
+            : NumValue(math.pow(v, 1 / 3).toDouble());
       case 'abs':
         final v = n(0);
-        return v == null ? const ErrorValue('abs needs a number') : NumValue(v.abs());
+        return v == null
+            ? const ErrorValue('abs needs a number')
+            : NumValue(v.abs());
       case 'log':
         final v = n(0);
         if (v == null) return const ErrorValue('log needs a number');
-        return NumValue(args.length > 1 ? math.log(v) / math.log(n(1)!) : math.log(v) / math.ln10);
+        return NumValue(
+          args.length > 1
+              ? math.log(v) / math.log(n(1)!)
+              : math.log(v) / math.ln10,
+        );
       case 'ln':
         final v = n(0);
-        return v == null ? const ErrorValue('ln needs a number') : NumValue(math.log(v));
+        return v == null
+            ? const ErrorValue('ln needs a number')
+            : NumValue(math.log(v));
       case 'exp':
         final v = n(0);
-        return v == null ? const ErrorValue('exp needs a number') : NumValue(math.exp(v));
+        return v == null
+            ? const ErrorValue('exp needs a number')
+            : NumValue(math.exp(v));
       case 'sin':
         return NumValue(_snap(math.sin(angle(0) ?? 0)));
       case 'cos':
@@ -346,10 +376,14 @@ class Evaluator {
         return NumValue(r);
       case 'min':
         final nums = args.whereType<NumValue>().map((e) => e.value).toList();
-        return nums.isEmpty ? const ErrorValue('min needs numbers') : NumValue(nums.reduce(math.min));
+        return nums.isEmpty
+            ? const ErrorValue('min needs numbers')
+            : NumValue(nums.reduce(math.min));
       case 'max':
         final nums = args.whereType<NumValue>().map((e) => e.value).toList();
-        return nums.isEmpty ? const ErrorValue('max needs numbers') : NumValue(nums.reduce(math.max));
+        return nums.isEmpty
+            ? const ErrorValue('max needs numbers')
+            : NumValue(nums.reduce(math.max));
       case 'pow':
         return NumValue(math.pow(n(0) ?? 0, n(1) ?? 0).toDouble());
       case 'random':

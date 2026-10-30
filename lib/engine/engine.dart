@@ -33,8 +33,19 @@ class LineResult {
 class SheetEngine {
   /// Whole-sheet totals. "total" alone stays the section total.
   static const _grandWords = {
-    'grand total', 'grandtotal', 'grand-total', 'total all', 'sum all',
-    '全部', '合共', '總共', '總計', '總和', '加埋', '全部加埋', '全計',
+    'grand total',
+    'grandtotal',
+    'grand-total',
+    'total all',
+    'sum all',
+    '全部',
+    '合共',
+    '總共',
+    '總計',
+    '總和',
+    '加埋',
+    '全部加埋',
+    '全計',
   };
 
   final UnitRegistry units;
@@ -52,9 +63,9 @@ class SheetEngine {
     Map<String, double>? rates,
     this.strict = false,
     this.baseCurrency = 'HKD',
-  })  : units = units ?? UnitRegistry(),
-        dates = DateParser(now: now),
-        rates = rates ?? const {'USD': 1, 'HKD': 7.8};
+  }) : units = units ?? UnitRegistry(),
+       dates = DateParser(now: now),
+       rates = rates ?? const {'USD': 1, 'HKD': 7.8};
 
   /// Walks the parsed expression and returns one line per operation, e.g.
   /// ["2.5 + 7.5 = 10", "10 * 1.11 = 11.1", ...]. Empty when the line is a
@@ -157,11 +168,13 @@ class SheetEngine {
         continue;
       }
       if (trimmed.startsWith('//') || _isComment(trimmed)) {
-        results.add(LineResult(
-          text: raw,
-          isComment: true,
-          isHeading: trimmed.startsWith('# '),
-        ));
+        results.add(
+          LineResult(
+            text: raw,
+            isComment: true,
+            isHeading: trimmed.startsWith('# '),
+          ),
+        );
         values.add(null);
         leafAt.add(null);
         if (trimmed.startsWith('# ')) sectionStart = i + 1;
@@ -169,9 +182,10 @@ class SheetEngine {
       }
 
       // "total of #food" is a command, not a line tagged #food
-      final isTagTotal = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#',
-              caseSensitive: false)
-          .hasMatch(trimmed);
+      final isTagTotal = RegExp(
+        r'^(?:total|sum|subtotal)\s+of\s+#',
+        caseSensitive: false,
+      ).hasMatch(trimmed);
       final tag = isTagTotal ? null : _extractTag(trimmed);
       final body = tag == null
           ? trimmed
@@ -189,22 +203,24 @@ class SheetEngine {
           leafAt: leafAt,
         );
         values.add(value);
-        leafAt.add(value is ErrorValue ||
-                _isAggregateLine(body) ||
-                _isSummaryLabel(body)
-            ? null
-            : value);
+        leafAt.add(
+          value is ErrorValue || _isAggregateLine(body) || _isSummaryLabel(body)
+              ? null
+              : value,
+        );
         if (collect && tag != null && value != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
         }
         final bad = value is ErrorValue;
-        results.add(LineResult(
-          text: raw,
-          value: bad ? null : value,
-          display: value == null || bad ? null : formatValue(value),
-          error: bad ? value.message : null,
-          tag: tag,
-        ));
+        results.add(
+          LineResult(
+            text: raw,
+            value: bad ? null : value,
+            display: value == null || bad ? null : formatValue(value),
+            error: bad ? value.message : null,
+            tag: tag,
+          ),
+        );
       } on UnresolvedWord {
         // "午餐 120" is prose with a number in it: show the number.
         final fallback = strict ? null : _loneNumber(body);
@@ -213,12 +229,14 @@ class SheetEngine {
         if (collect && tag != null && fallback != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
         }
-        results.add(LineResult(
-          text: raw,
-          value: fallback,
-          display: fallback == null ? null : formatValue(fallback),
-          tag: tag,
-        ));
+        results.add(
+          LineResult(
+            text: raw,
+            value: fallback,
+            display: fallback == null ? null : formatValue(fallback),
+            tag: tag,
+          ),
+        );
       } catch (e) {
         final fallback = strict ? null : _loneNumber(body);
         values.add(fallback);
@@ -226,13 +244,15 @@ class SheetEngine {
         if (collect && tag != null && fallback != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
         }
-        results.add(LineResult(
-          text: raw,
-          value: fallback,
-          display: fallback == null ? null : formatValue(fallback),
-          error: fallback == null ? e.toString() : null,
-          tag: tag,
-        ));
+        results.add(
+          LineResult(
+            text: raw,
+            value: fallback,
+            display: fallback == null ? null : formatValue(fallback),
+            error: fallback == null ? e.toString() : null,
+            tag: tag,
+          ),
+        );
       }
     }
     return results;
@@ -240,7 +260,13 @@ class SheetEngine {
 
   // a line starting with '#' is a comment or heading; tags only count at the end
   static const _aggWords = {
-    'sum', 'total', 'average', 'avg', 'count', 'min', 'max',
+    'sum',
+    'total',
+    'average',
+    'avg',
+    'count',
+    'min',
+    'max',
   };
 
   bool _isAggregateLine(String body) {
@@ -289,8 +315,13 @@ class SheetEngine {
     final label = RegExp(r'^([^:]{1,60}):\s*(.+)$').firstMatch(body);
     if (label != null &&
         RegExp(r'[A-Za-z\u4e00-\u9fff]').hasMatch(label.group(1)!)) {
-      final v = _parseValue(label.group(2)!.trim(), ctx,
-          values: values, sectionStart: sectionStart, current: current);
+      final v = _parseValue(
+        label.group(2)!.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
       if (v != null && v is! ErrorValue) return v;
     }
 
@@ -299,8 +330,13 @@ class SheetEngine {
     if (assign != null && !body.contains('==')) {
       final name = assign.group(1)!.trim().toLowerCase();
       if (name.isNotEmpty && !RegExp(r'^\d').hasMatch(name)) {
-        final v = _parseValue(assign.group(2)!.trim(), ctx,
-            values: values, sectionStart: sectionStart, current: current);
+        final v = _parseValue(
+          assign.group(2)!.trim(),
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        );
         if (v != null) {
           vars[name] = v;
           return v;
@@ -310,18 +346,28 @@ class SheetEngine {
 
     // aggregation
     final agg = body.toLowerCase();
-    if (const {'sum', 'total', 'average', 'avg', 'count', 'min', 'max'}
-        .contains(agg)) {
+    if (const {
+      'sum',
+      'total',
+      'average',
+      'avg',
+      'count',
+      'min',
+      'max',
+    }.contains(agg)) {
       final slice = leafAt.sublist(sectionStart, current);
       return _aggregate(agg, slice.whereType<Value>().toList());
     }
     // grand total: every answer above this line, grouped by unit
     if (_grandWords.contains(agg)) {
-      return _grandTotal(leafAt.sublist(0, current).whereType<Value>().toList());
+      return _grandTotal(
+        leafAt.sublist(0, current).whereType<Value>().toList(),
+      );
     }
 
-    final tagged = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#([\w\u4e00-\u9fff]+)$')
-        .firstMatch(agg);
+    final tagged = RegExp(
+      r'^(?:total|sum|subtotal)\s+of\s+#([\w\u4e00-\u9fff]+)$',
+    ).firstMatch(agg);
     if (tagged != null) {
       final items = tags[tagged.group(1)!.toLowerCase()] ?? const <Value>[];
       if (items.isEmpty) {
@@ -331,21 +377,50 @@ class SheetEngine {
     }
 
     // rule of three: "9 is to 16 as 27 is to what"
-    final r3 = RegExp(r'^(.*?)\s+is\s+to\s+(.*?)\s+as\s+(.*?)\s+is\s+to\s+(what|\?|.*)$',
-            caseSensitive: false)
-        .firstMatch(body);
+    final r3 = RegExp(
+      r'^(.*?)\s+is\s+to\s+(.*?)\s+as\s+(.*?)\s+is\s+to\s+(what|\?|.*)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (r3 != null) {
-      final a = _numOf(_parseValue(r3.group(1)!.trim(), ctx,
-          values: values, sectionStart: sectionStart, current: current));
-      final b = _numOf(_parseValue(r3.group(2)!.trim(), ctx,
-          values: values, sectionStart: sectionStart, current: current));
-      final c = _numOf(_parseValue(r3.group(3)!.trim(), ctx,
-          values: values, sectionStart: sectionStart, current: current));
+      final a = _numOf(
+        _parseValue(
+          r3.group(1)!.trim(),
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
+      final b = _numOf(
+        _parseValue(
+          r3.group(2)!.trim(),
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
+      final c = _numOf(
+        _parseValue(
+          r3.group(3)!.trim(),
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
       final dText = r3.group(4)!.trim().toLowerCase();
       if (a != null && b != null && c != null && a != 0) {
         if (dText == 'what' || dText == '?') return NumValue(c * b / a);
-        final d = _numOf(_parseValue(r3.group(4)!.trim(), ctx,
-            values: values, sectionStart: sectionStart, current: current));
+        final d = _numOf(
+          _parseValue(
+            r3.group(4)!.trim(),
+            ctx,
+            values: values,
+            sectionStart: sectionStart,
+            current: current,
+          ),
+        );
         if (d != null) {
           // solve for the missing first value instead
           if (dText.isNotEmpty && a == 0) return NumValue(c * b / d);
@@ -354,63 +429,98 @@ class SheetEngine {
     }
 
     // if <cond> then <a> else <b>
-    final cond = RegExp(r'^if\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+)$',
-            caseSensitive: false)
-        .firstMatch(body);
+    final cond = RegExp(
+      r'^if\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (cond != null) {
       final ok = _compare(cond.group(1)!, ctx);
       final branch = ok == null ? null : (ok ? cond.group(2)! : cond.group(3)!);
       if (branch != null) {
-        return _parseValue(branch.trim(), ctx,
-            values: values, sectionStart: sectionStart, current: current);
+        return _parseValue(
+          branch.trim(),
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        );
       }
     }
 
     // "20 is what % of 80" / "20 is what percent of 80"
-    final whatPct = RegExp(r'^(.*?)\s+is\s+what\s+(?:%|percent)\s+of\s+(.*)$',
-            caseSensitive: false)
-        .firstMatch(body);
+    final whatPct = RegExp(
+      r'^(.*?)\s+is\s+what\s+(?:%|percent)\s+of\s+(.*)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (whatPct != null) {
-      final a = _numOf(_parseValue(whatPct.group(1)!, ctx,
-          values: values, sectionStart: sectionStart, current: current));
-      final b = _numOf(_parseValue(whatPct.group(2)!, ctx,
-          values: values, sectionStart: sectionStart, current: current));
+      final a = _numOf(
+        _parseValue(
+          whatPct.group(1)!,
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
+      final b = _numOf(
+        _parseValue(
+          whatPct.group(2)!,
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
       if (a != null && b != null && b != 0) return PercentValue(a / b);
     }
 
     // "5% of what is 150"
-    final pctWhat = RegExp(r'^([\d.]+)\s*%\s+of\s+what\s+is\s+(.*)$',
-            caseSensitive: false)
-        .firstMatch(body);
+    final pctWhat = RegExp(
+      r'^([\d.]+)\s*%\s+of\s+what\s+is\s+(.*)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (pctWhat != null) {
       final p = double.tryParse(pctWhat.group(1)!);
-      final b = _numOf(_parseValue(pctWhat.group(2)!, ctx,
-          values: values, sectionStart: sectionStart, current: current));
+      final b = _numOf(
+        _parseValue(
+          pctWhat.group(2)!,
+          ctx,
+          values: values,
+          sectionStart: sectionStart,
+          current: current,
+        ),
+      );
       if (p != null && b != null && p != 0) return NumValue(b / (p / 100));
     }
 
     // "compound interest 5000 at 7.5% for 3 years"
     final ci = RegExp(
-            r'^(?:compound\s+interest|compounding)\s+([\d.,]+)\s*(?:at|@)\s*([\d.]+)\s*%\s+(?:for|over)\s+(.+)$',
-            caseSensitive: false)
-        .firstMatch(body);
+      r'^(?:compound\s+interest|compounding)\s+([\d.,]+)\s*(?:at|@)\s*([\d.]+)\s*%\s+(?:for|over)\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (ci != null) {
       final principal = double.tryParse(ci.group(1)!.replaceAll(',', ''));
       final rate = double.tryParse(ci.group(2)!);
       final years = _years(ci.group(3)!);
       if (principal != null && rate != null && years != null) {
-        return NumValue(
-            principal * math.pow(1 + rate / 100, years).toDouble());
+        return NumValue(principal * math.pow(1 + rate / 100, years).toDouble());
       }
     }
 
     // "25% off 159.99"
-    final off = RegExp(r'^([\d.]+)\s*%\s+off\s+(.*)$', caseSensitive: false)
-        .firstMatch(body);
+    final off = RegExp(
+      r'^([\d.]+)\s*%\s+off\s+(.*)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (off != null) {
       final p = double.tryParse(off.group(1)!);
-      final v = _parseValue(off.group(2)!, ctx,
-          values: values, sectionStart: sectionStart, current: current);
+      final v = _parseValue(
+        off.group(2)!,
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
       if (p != null && v is NumValue) {
         return NumValue(v.value * (1 - p / 100), v.unit);
       }
@@ -420,9 +530,10 @@ class SheetEngine {
     }
 
     // "days between A and B"
-    final between = RegExp(r'^(?:how\s+many\s+)?(\w+)?\s*between\s+(.+?)\s+and\s+(.+)$',
-            caseSensitive: false)
-        .firstMatch(body);
+    final between = RegExp(
+      r'^(?:how\s+many\s+)?(\w+)?\s*between\s+(.+?)\s+and\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (between != null) {
       final a = dates.parse(between.group(2)!);
       final b = dates.parse(between.group(3)!);
@@ -447,14 +558,22 @@ class SheetEngine {
           final signed = dateMath.group(2) == '-'
               ? left.subtract(dur)
               : left.add(dur);
-          return DateValue(signed, hasTime: body.contains(':') || body.toLowerCase().contains('am') || body.toLowerCase().contains('pm'));
+          return DateValue(
+            signed,
+            hasTime:
+                body.contains(':') ||
+                body.toLowerCase().contains('am') ||
+                body.toLowerCase().contains('pm'),
+          );
         }
       }
     }
 
     // "3pm HKT in New York"
-    final zoneIn = RegExp(r'^(.*?)\s+in\s+(.+)$', caseSensitive: false)
-        .firstMatch(body);
+    final zoneIn = RegExp(
+      r'^(.*?)\s+in\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(body);
     if (zoneIn != null) {
       final dst = DateParser.zoneFor(zoneIn.group(2)!);
       if (dst != null) {
@@ -474,12 +593,19 @@ class SheetEngine {
     // bare date
     final bare = dates.parse(body);
     if (bare != null) {
-      return DateValue(bare,
-          hasTime: RegExp(r'\d:\d|am|pm', caseSensitive: false).hasMatch(body));
+      return DateValue(
+        bare,
+        hasTime: RegExp(r'\d:\d|am|pm', caseSensitive: false).hasMatch(body),
+      );
     }
 
-    return _parseValue(body, ctx,
-        values: values, sectionStart: sectionStart, current: current);
+    return _parseValue(
+      body,
+      ctx,
+      values: values,
+      sectionStart: sectionStart,
+      current: current,
+    );
   }
 
   String? _trailingZone(String s) {
@@ -504,18 +630,21 @@ class SheetEngine {
         return v == null ? m.group(0)! : _literal(v);
       },
     );
-    expanded = expanded.replaceAllMapped(RegExp(r'\bprev\b', caseSensitive: false),
-        (m) {
-      final v = ctx.prev;
-      return v == null ? m.group(0)! : _literal(v);
-    });
+    expanded = expanded.replaceAllMapped(
+      RegExp(r'\bprev\b', caseSensitive: false),
+      (m) {
+        final v = ctx.prev;
+        return v == null ? m.group(0)! : _literal(v);
+      },
+    );
 
     // Soulver's "read past" behaviour: if the line starts with prose, retry
     // the expression starting at each later word boundary. "買嘢 4300 x 30%"
     // still answers.
     Object? lastError;
-    final candidates =
-        strict ? [expanded] : _candidates(expanded).take(8).toList();
+    final candidates = strict
+        ? [expanded]
+        : _candidates(expanded).take(8).toList();
     for (final candidate in candidates) {
       try {
         final node = Parser.parseExpression(candidate, units);
@@ -539,8 +668,7 @@ class SheetEngine {
     }
   }
 
-  bool _isProse(String s) =>
-      !RegExp(r'[0-9+\-*/^%().$,=<>×÷]').hasMatch(s);
+  bool _isProse(String s) => !RegExp(r'[0-9+\-*/^%().$,=<>×÷]').hasMatch(s);
 
   String _literal(Value v) {
     if (v is NumValue) {
@@ -555,9 +683,10 @@ class SheetEngine {
   double? _numOf(Value? v) => v is NumValue ? v.value : null;
 
   double? _years(String s) {
-    final m = RegExp(r'([\d.]+)\s*(years?|months?|weeks?|days?)',
-            caseSensitive: false)
-        .firstMatch(s);
+    final m = RegExp(
+      r'([\d.]+)\s*(years?|months?|weeks?|days?)',
+      caseSensitive: false,
+    ).firstMatch(s);
     if (m == null) return double.tryParse(s.trim());
     final n = double.tryParse(m.group(1)!);
     if (n == null) return null;
@@ -572,10 +701,24 @@ class SheetEngine {
   bool? _compare(String expr, EvalContext ctx) {
     final m = RegExp(r'^(.*?)\s*(>=|<=|==|!=|>|<)\s*(.*)$').firstMatch(expr);
     if (m == null) return null;
-    final a = _numOf(_parseValue(m.group(1)!.trim(), ctx,
-        values: const [], sectionStart: 0, current: 0));
-    final b = _numOf(_parseValue(m.group(3)!.trim(), ctx,
-        values: const [], sectionStart: 0, current: 0));
+    final a = _numOf(
+      _parseValue(
+        m.group(1)!.trim(),
+        ctx,
+        values: const [],
+        sectionStart: 0,
+        current: 0,
+      ),
+    );
+    final b = _numOf(
+      _parseValue(
+        m.group(3)!.trim(),
+        ctx,
+        values: const [],
+        sectionStart: 0,
+        current: 0,
+      ),
+    );
     if (a == null || b == null) return null;
     return switch (m.group(2)) {
       '>' => a > b,
@@ -615,9 +758,9 @@ class SheetEngine {
       final key = n.unit == null
           ? 'plain'
           : (n.unit!.dims.entries.toList()
-                ..sort((a, b) => a.key.compareTo(b.key)))
-              .map((e) => '${e.key}:${e.value}')
-              .join(',');
+                  ..sort((a, b) => a.key.compareTo(b.key)))
+                .map((e) => '${e.key}:${e.value}')
+                .join(',');
       groups.putIfAbsent(key, () => []).add(n);
     }
     for (final list in groups.values) {

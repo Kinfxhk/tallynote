@@ -66,9 +66,30 @@ class ParseError implements Exception {
 }
 
 const _funcNames = {
-  'sqrt', 'cbrt', 'abs', 'log', 'ln', 'exp', 'sin', 'cos', 'tan',
-  'asin', 'acos', 'atan', 'arcsin', 'arccos', 'arctan', 'round', 'ceil',
-  'floor', 'fact', 'min', 'max', 'pow', 'random', 'root',
+  'sqrt',
+  'cbrt',
+  'abs',
+  'log',
+  'ln',
+  'exp',
+  'sin',
+  'cos',
+  'tan',
+  'asin',
+  'acos',
+  'atan',
+  'arcsin',
+  'arccos',
+  'arctan',
+  'round',
+  'ceil',
+  'floor',
+  'fact',
+  'min',
+  'max',
+  'pow',
+  'random',
+  'root',
 };
 
 class Parser {
@@ -89,10 +110,12 @@ class Parser {
       // trailing words ("10% tax", "3 apples each") are not an error: the
       // answer we have is still the one the user meant.
       final rest = tokens.skip(_p);
-      final ignorable = rest.every((t) =>
-          t.type == TokType.word ||
-          t.type == TokType.tag ||
-          t.type == TokType.comma);
+      final ignorable = rest.every(
+        (t) =>
+            t.type == TokType.word ||
+            t.type == TokType.tag ||
+            t.type == TokType.comma,
+      );
       if (!lenient || !ignorable) {
         throw ParseError('unexpected "${cur!.text}"');
       }
@@ -164,12 +187,18 @@ class Parser {
   Node _additive() {
     var left = _multiplicative();
     while (true) {
-      if (_matchOp('+') || _matchWords(['plus']) || _matchWords(['and']) ||
-          _matchWords(['加']) || _matchWords(['加上'])) {
+      if (_matchOp('+') ||
+          _matchWords(['plus']) ||
+          _matchWords(['and']) ||
+          _matchWords(['加']) ||
+          _matchWords(['加上'])) {
         left = BinNode('+', left, _multiplicative());
-      } else if (_matchOp('-') || _matchWords(['minus']) ||
-          _matchWords(['減']) || _matchWords(['減去']) ||
-          _matchWords(['减']) || _matchWords(['减去'])) {
+      } else if (_matchOp('-') ||
+          _matchWords(['minus']) ||
+          _matchWords(['減']) ||
+          _matchWords(['減去']) ||
+          _matchWords(['减']) ||
+          _matchWords(['减去'])) {
         left = BinNode('-', left, _multiplicative());
       } else {
         break;
@@ -181,8 +210,11 @@ class Parser {
   Node _multiplicative() {
     var left = _unary();
     while (true) {
-      if (_matchOp('*') || _matchOp('×') || _matchWords(['times']) ||
-          _matchWords(['乘']) || _matchWords(['乘以'])) {
+      if (_matchOp('*') ||
+          _matchOp('×') ||
+          _matchWords(['times']) ||
+          _matchWords(['乘']) ||
+          _matchWords(['乘以'])) {
         left = BinNode('*', left, _unary());
       } else if (_isLowerX()) {
         // "x" is how people type × on a keyboard
@@ -190,10 +222,14 @@ class Parser {
         left = BinNode('*', left, _unary());
       } else if (_matchWords(['multiplied', 'by'])) {
         left = BinNode('*', left, _unary());
-      } else if (_matchOp('/') || _matchOp('÷') ||
-          _matchWords(['divided', 'by']) || _matchWords(['over']) ||
-          _matchWords(['into']) || _matchWords(['per']) ||
-          _matchWords(['除']) || _matchWords(['除以'])) {
+      } else if (_matchOp('/') ||
+          _matchOp('÷') ||
+          _matchWords(['divided', 'by']) ||
+          _matchWords(['over']) ||
+          _matchWords(['into']) ||
+          _matchWords(['per']) ||
+          _matchWords(['除']) ||
+          _matchWords(['除以'])) {
         left = BinNode('/', left, _unary());
       } else if (cur?.type == TokType.lparen) {
         left = BinNode('*', left, _unary()); // implicit: 2(3+4)
@@ -267,11 +303,49 @@ class Parser {
   }
 
   static const _reserved = {
-    'in', 'to', 'as', 'of', 'off', 'per', 'plus', 'minus', 'times', 'x',
-    '加', '加上', '減', '減去', '减', '减去', '乘', '乘以', '除', '除以',
-    'multiplied', 'divided', 'over', 'into', 'and', 'if', 'then', 'else',
-    'is', 'what', 'between', 'tax', 'total', 'sum', 'average', 'prev',
-    'line', 'at', 'from', 'now', 'today', 'tomorrow', 'yesterday',
+    'in',
+    'to',
+    'as',
+    'of',
+    'off',
+    'per',
+    'plus',
+    'minus',
+    'times',
+    'x',
+    '加',
+    '加上',
+    '減',
+    '減去',
+    '减',
+    '减去',
+    '乘',
+    '乘以',
+    '除',
+    '除以',
+    'multiplied',
+    'divided',
+    'over',
+    'into',
+    'and',
+    'if',
+    'then',
+    'else',
+    'is',
+    'what',
+    'between',
+    'tax',
+    'total',
+    'sum',
+    'average',
+    'prev',
+    'line',
+    'at',
+    'from',
+    'now',
+    'today',
+    'tomorrow',
+    'yesterday',
   };
 
   Node _primary() {
@@ -292,9 +366,18 @@ class Parser {
         code = 'USD';
       } else {
         code = const {
-          '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₩': 'KRW',
-          '₹': 'INR', '฿': 'THB', r'HK$': 'HKD', r'US$': 'USD',
-          r'NT$': 'TWD', r'S$': 'SGD', r'A$': 'AUD', r'C$': 'CAD',
+          '€': 'EUR',
+          '£': 'GBP',
+          '¥': 'JPY',
+          '₩': 'KRW',
+          '₹': 'INR',
+          '฿': 'THB',
+          r'HK$': 'HKD',
+          r'US$': 'USD',
+          r'NT$': 'TWD',
+          r'S$': 'SGD',
+          r'A$': 'AUD',
+          r'C$': 'CAD',
         }[c.text];
       }
       // HK$ / S$ / NT$ style: the word before was consumed? handled in lexer
@@ -336,8 +419,10 @@ class Parser {
         if (next != null && next.type == TokType.number) {
           _p++;
           _p++;
-          return MoneyNode(_currencyScale(next.num!, lower.toUpperCase()),
-              lower.toUpperCase());
+          return MoneyNode(
+            _currencyScale(next.num!, lower.toUpperCase()),
+            lower.toUpperCase(),
+          );
         }
       }
 
@@ -397,19 +482,60 @@ class Parser {
     return CallNode(name, args);
   }
 
-  bool _isCurrencyCode(String s) =>
-      const {'usd', 'hkd', 'cny', 'jpy', 'eur', 'gbp', 'krw', 'twd', 'sgd',
-        'aud', 'cad', 'chf', 'inr', 'thb', 'myr', 'php', 'vnd', 'nzd', 'sek',
-        'nok', 'dkk', 'rub', 'brl', 'mxn', 'zar', 'aed', 'idr', 'try', 'pln',
-        'ils'}.contains(s);
+  bool _isCurrencyCode(String s) => const {
+    'usd',
+    'hkd',
+    'cny',
+    'jpy',
+    'eur',
+    'gbp',
+    'krw',
+    'twd',
+    'sgd',
+    'aud',
+    'cad',
+    'chf',
+    'inr',
+    'thb',
+    'myr',
+    'php',
+    'vnd',
+    'nzd',
+    'sek',
+    'nok',
+    'dkk',
+    'rub',
+    'brl',
+    'mxn',
+    'zar',
+    'aed',
+    'idr',
+    'try',
+    'pln',
+    'ils',
+  }.contains(s);
 
   String? _moneyFromWord(String w) {
     if (_isCurrencyCode(w)) return w.toUpperCase();
     const aliases = {
-      'dollar': 'USD', 'dollars': 'USD', 'usd': 'USD', 'euro': 'EUR',
-      'euros': 'EUR', 'pound': 'GBP', 'pounds': 'GBP', 'yen': 'JPY',
-      'won': 'KRW', 'yuan': 'CNY', 'rmb': 'CNY', '元': 'CNY', '港元': 'HKD',
-      '港幣': 'HKD', '蚊': 'HKD', '美元': 'USD', '歐元': 'EUR', '日圓': 'JPY',
+      'dollar': 'USD',
+      'dollars': 'USD',
+      'usd': 'USD',
+      'euro': 'EUR',
+      'euros': 'EUR',
+      'pound': 'GBP',
+      'pounds': 'GBP',
+      'yen': 'JPY',
+      'won': 'KRW',
+      'yuan': 'CNY',
+      'rmb': 'CNY',
+      '元': 'CNY',
+      '港元': 'HKD',
+      '港幣': 'HKD',
+      '蚊': 'HKD',
+      '美元': 'USD',
+      '歐元': 'EUR',
+      '日圓': 'JPY',
     };
     return aliases[w];
   }

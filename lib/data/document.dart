@@ -17,18 +17,18 @@ class Sheet {
   }) : updated = updated ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'content': content,
-        'updated': updated.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'content': content,
+    'updated': updated.toIso8601String(),
+  };
 
   factory Sheet.fromJson(Map<String, dynamic> j) => Sheet(
-        id: j['id'] as String,
-        title: j['title'] as String? ?? 'Untitled',
-        content: j['content'] as String? ?? '',
-        updated: DateTime.tryParse(j['updated'] as String? ?? ''),
-      );
+    id: j['id'] as String,
+    title: j['title'] as String? ?? 'Untitled',
+    content: j['content'] as String? ?? '',
+    updated: DateTime.tryParse(j['updated'] as String? ?? ''),
+  );
 }
 
 /// Sheets live in one JSON blob in shared preferences: small, portable and
@@ -59,11 +59,7 @@ class DocumentStore extends ChangeNotifier {
       }
     }
     if (sheets.isEmpty) {
-      sheets.add(Sheet(
-        id: _newId(),
-        title: 'Untitled',
-        content: '',
-      ));
+      sheets.add(Sheet(id: _newId(), title: 'Untitled', content: ''));
     }
     activeId = prefs.getString(_activeKey) ?? sheets.first.id;
     if (!sheets.any((s) => s.id == activeId)) activeId = sheets.first.id;
@@ -74,7 +70,9 @@ class DocumentStore extends ChangeNotifier {
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _key, jsonEncode(sheets.map((s) => s.toJson()).toList()));
+      _key,
+      jsonEncode(sheets.map((s) => s.toJson()).toList()),
+    );
     if (activeId != null) await prefs.setString(_activeKey, activeId!);
   }
 

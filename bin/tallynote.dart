@@ -109,15 +109,17 @@ void main(List<String> argv) {
     if (r.error != null) failed++;
 
     if (json) {
-      out.writeln(jsonEncode({
-        'line': i + 1,
-        'input': r.text,
-        'display': r.display,
-        'error': r.error,
-        'value': _valueJson(r.value),
-        if (steps && r.display != null && r.error == null)
-          'steps': engine.explain(r.text),
-      }));
+      out.writeln(
+        jsonEncode({
+          'line': i + 1,
+          'input': r.text,
+          'display': r.display,
+          'error': r.error,
+          'value': _valueJson(r.value),
+          if (steps && r.display != null && r.error == null)
+            'steps': engine.explain(r.text),
+        }),
+      );
     } else {
       final answer = r.display ?? '';
       out.writeln(answer.isEmpty ? r.text : '${r.text}\t$answer');

@@ -69,9 +69,36 @@ const Map<String, String> currencySymbols = {
 };
 
 const Set<String> currencyCodes = {
-  'USD', 'HKD', 'CNY', 'JPY', 'EUR', 'GBP', 'KRW', 'TWD', 'SGD', 'AUD',
-  'CAD', 'CHF', 'INR', 'THB', 'MYR', 'PHP', 'VND', 'NZD', 'SEK', 'NOK',
-  'DKK', 'RUB', 'BRL', 'MXN', 'ZAR', 'AED', 'IDR', 'TRY', 'PLN', 'ILS',
+  'USD',
+  'HKD',
+  'CNY',
+  'JPY',
+  'EUR',
+  'GBP',
+  'KRW',
+  'TWD',
+  'SGD',
+  'AUD',
+  'CAD',
+  'CHF',
+  'INR',
+  'THB',
+  'MYR',
+  'PHP',
+  'VND',
+  'NZD',
+  'SEK',
+  'NOK',
+  'DKK',
+  'RUB',
+  'BRL',
+  'MXN',
+  'ZAR',
+  'AED',
+  'IDR',
+  'TRY',
+  'PLN',
+  'ILS',
 };
 
 const Map<String, String> currencyAliases = {
@@ -96,8 +123,8 @@ String formatNumber(double v, {int? decimals}) {
   var s = decimals != null
       ? v.toStringAsFixed(decimals)
       : v.abs() >= 1e15 || v.abs() < 1e-9
-          ? v.toStringAsExponential(6)
-          : _toPrecision(v, 12);
+      ? v.toStringAsExponential(6)
+      : _toPrecision(v, 12);
 
   if (s.contains('e')) {
     s = s.replaceAll(RegExp(r'0+e'), 'e').replaceAll(RegExp(r'\.e'), 'e');
@@ -131,7 +158,8 @@ String _toPrecision(double v, int sig) {
     // fall back to fixed for moderate magnitudes
     final mag = v.abs();
     if (mag < 1e15 && mag > 1e-6) {
-      var d = sig - 1 - (v.abs().toStringAsExponential().split('e')[0].length - 2);
+      var d =
+          sig - 1 - (v.abs().toStringAsExponential().split('e')[0].length - 2);
       if (d < 0) d = 0;
       if (d > 12) d = 12;
       return v.toStringAsFixed(d);
@@ -142,7 +170,10 @@ String _toPrecision(double v, int sig) {
 
 const _unitSymbols = {'C': '°C', 'F': '°F'};
 const _plurals = {
-  'day': 'days', 'week': 'weeks', 'month': 'months', 'year': 'years',
+  'day': 'days',
+  'week': 'weeks',
+  'month': 'months',
+  'year': 'years',
 };
 
 String _unitLabel(String id, double value) {
@@ -182,8 +213,18 @@ String formatValue(Value v, {int? decimals}) {
 }
 
 const _months = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';

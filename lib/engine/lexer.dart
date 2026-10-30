@@ -26,7 +26,8 @@ class Lexer {
         _i++;
         continue;
       }
-      if (_isDigit(c) || (c == '.' && _i + 1 < src.length && _isDigit(src[_i + 1]))) {
+      if (_isDigit(c) ||
+          (c == '.' && _i + 1 < src.length && _isDigit(src[_i + 1]))) {
         _number();
         continue;
       }
@@ -45,10 +46,13 @@ class Lexer {
       if (c == '#') {
         _i++;
         final start = _i;
-        while (_i < src.length && (_isLetter(src[_i]) || _isDigit(src[_i]) || src[_i] == '_')) {
+        while (_i < src.length &&
+            (_isLetter(src[_i]) || _isDigit(src[_i]) || src[_i] == '_')) {
           _i++;
         }
-        if (_i > start) out.add(Token(TokType.tag, src.substring(start, _i), start));
+        if (_i > start) {
+          out.add(Token(TokType.tag, src.substring(start, _i), start));
+        }
         continue;
       }
       if (c == '(') {
@@ -88,7 +92,10 @@ class Lexer {
         _i++;
       } else if (c == ',' && _i + 3 <= src.length && _digitsAhead(3)) {
         _i++; // thousands separator
-      } else if (c == '.' && !sawDot && _i + 1 < src.length && _isDigit(src[_i + 1])) {
+      } else if (c == '.' &&
+          !sawDot &&
+          _i + 1 < src.length &&
+          _isDigit(src[_i + 1])) {
         sawDot = true;
         _i++;
       } else {
@@ -116,9 +123,30 @@ class Lexer {
   }
 
   static const _funcNames = {
-    'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'arcsin', 'arccos',
-    'arctan', 'sqrt', 'cbrt', 'abs', 'log', 'ln', 'exp', 'round', 'ceil',
-    'floor', 'fact', 'min', 'max', 'pow', 'root', 'random',
+    'sin',
+    'cos',
+    'tan',
+    'asin',
+    'acos',
+    'atan',
+    'arcsin',
+    'arccos',
+    'arctan',
+    'sqrt',
+    'cbrt',
+    'abs',
+    'log',
+    'ln',
+    'exp',
+    'round',
+    'ceil',
+    'floor',
+    'fact',
+    'min',
+    'max',
+    'pow',
+    'root',
+    'random',
   };
 
   void _word() {
@@ -128,7 +156,9 @@ class Lexer {
     while (j < src.length && _isLetter(src[j]) && !_isCjk(src[j])) {
       j++;
     }
-    if (j > _i && j < src.length && _isDigit(src[j]) &&
+    if (j > _i &&
+        j < src.length &&
+        _isDigit(src[j]) &&
         _funcNames.contains(src.substring(_i, j).toLowerCase())) {
       final name = src.substring(_i, j);
       _i = j;
@@ -146,7 +176,12 @@ class Lexer {
       final c = src[_i];
       // "30乘3": 乘 is a word, the 3 after it is a number
       if (cjkStart && _isDigit(c)) break;
-      if (_isLetter(c) || _isDigit(c) || c == '_' || c == '°' || c == '/' || c == '%') {
+      if (_isLetter(c) ||
+          _isDigit(c) ||
+          c == '_' ||
+          c == '°' ||
+          c == '/' ||
+          c == '%') {
         // stop '/' inside a word only when it starts a unit ratio like MB/s
         if (c == '/' && !(_i + 1 < src.length && _isLetter(src[_i + 1]))) break;
         _i++;
@@ -158,7 +193,9 @@ class Lexer {
     }
     final word = src.substring(start, _i);
     // HK$ / US$ / NT$ / S$ prefixes
-    if (_i < src.length && src[_i] == r'$' && word.length <= 3 &&
+    if (_i < src.length &&
+        src[_i] == r'$' &&
+        word.length <= 3 &&
         word.toUpperCase() == word) {
       _i++;
       out.add(Token(TokType.currency, '$word\$', start));
@@ -167,7 +204,8 @@ class Lexer {
     out.add(Token(TokType.word, word, start));
   }
 
-  static bool _isDigit(String c) => c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57;
+  static bool _isDigit(String c) =>
+      c.codeUnitAt(0) >= 48 && c.codeUnitAt(0) <= 57;
 
   static bool _isLetter(String c) {
     final code = c.codeUnitAt(0);
@@ -179,6 +217,7 @@ class Lexer {
 
   static bool _isCjk(String c) {
     final code = c.codeUnitAt(0);
-    return (code >= 0x4E00 && code <= 0x9FFF) || (code >= 0x3040 && code <= 0x30FF);
+    return (code >= 0x4E00 && code <= 0x9FFF) ||
+        (code >= 0x3040 && code <= 0x30FF);
   }
 }

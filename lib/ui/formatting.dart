@@ -30,16 +30,25 @@ class Fmt {
       out = out.replaceAll(m, '');
     }
     out = out.replaceAll('{/}', '');
-    out = out.replaceAllMapped(RegExp(r'\{(' + colours.keys.join('|') + r')\}'),
-        (_) => '');
+    out = out.replaceAllMapped(
+      RegExp(r'\{(' + colours.keys.join('|') + r')\}'),
+      (_) => '',
+    );
     // single underscores only when they wrap something, so identifiers like
     // my_var survive
-    out = out.replaceAllMapped(RegExp(r'(^|\s)_([^_]+)_(?=\s|$)'), (m) => '${m[1]}${m[2]}');
+    out = out.replaceAllMapped(
+      RegExp(r'(^|\s)_([^_]+)_(?=\s|$)'),
+      (m) => '${m[1]}${m[2]}',
+    );
     return out;
   }
 
   /// Turns one line into styled spans. Unmatched markers are shown as text.
-  static List<TextSpan> spans(String text, TextStyle base, {bool cursor = false}) {
+  static List<TextSpan> spans(
+    String text,
+    TextStyle base, {
+    bool cursor = false,
+  }) {
     final spans = <TextSpan>[];
     var style = base;
     final buf = StringBuffer();
@@ -110,7 +119,11 @@ class Fmt {
   /// Wraps [selection] in the given marker pair; returns the new text and
   /// where the caret should land.
   static (String, TextSelection) wrap(
-      String text, TextSelection sel, String open, String close) {
+    String text,
+    TextSelection sel,
+    String open,
+    String close,
+  ) {
     if (!sel.isValid || sel.isCollapsed) return (text, sel);
     final before = text.substring(0, sel.start);
     final middle = text.substring(sel.start, sel.end);
@@ -119,8 +132,9 @@ class Fmt {
     return (
       newText,
       TextSelection(
-          baseOffset: sel.start + open.length,
-          extentOffset: sel.start + open.length + middle.length)
+        baseOffset: sel.start + open.length,
+        extentOffset: sel.start + open.length + middle.length,
+      ),
     );
   }
 

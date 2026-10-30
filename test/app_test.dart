@@ -67,12 +67,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.textContaining('9'), findsOneWidget);
 
-    final plus = find.descendant(
+    final chevron = find.descendant(
       of: find.byType(EditorView),
       matching: find.byIcon(Icons.chevron_right),
     );
-    expect(plus, findsOneWidget);
-    await tester.tap(plus);
+    expect(chevron, findsOneWidget);
+
+    // the whole answer cell is the target, not the 16px glyph
+    await tester.tap(find.textContaining('9'));
     await tester.pumpAndSettle();
     expect(find.text('Steps'), findsOneWidget);
     expect(find.textContaining('1 + 2 = 3'), findsOneWidget);
@@ -93,8 +95,11 @@ void main() {
     final dotX = tester.getTopLeft(dot).dx;
 
     for (final head in ['5,000', '28', '2,469']) {
-      expect(tester.getTopRight(find.text(head)).dx, closeTo(dotX, 0.6),
-          reason: 'head $head should end at the decimal column');
+      expect(
+        tester.getTopRight(find.text(head)).dx,
+        closeTo(dotX, 0.6),
+        reason: 'head $head should end at the decimal column',
+      );
     }
   });
 

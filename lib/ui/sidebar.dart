@@ -41,8 +41,10 @@ class Sidebar extends StatelessWidget {
                   tooltip: 'Collapse sidebar  ⌘\\',
                   iconSize: 18,
                   onPressed: onClose,
-                  icon: Icon(Icons.keyboard_double_arrow_left,
-                      color: Palette.faint(dark)),
+                  icon: Icon(
+                    Icons.keyboard_double_arrow_left,
+                    color: Palette.faint(dark),
+                  ),
                 ),
               ],
             ),
@@ -78,9 +80,10 @@ class Sidebar extends StatelessWidget {
                 children: [
                   Icon(Icons.add, size: 16, color: Palette.faint(dark)),
                   const SizedBox(width: 8),
-                  Text('New sheet',
-                      style: TextStyle(
-                          fontSize: 13, color: Palette.faint(dark))),
+                  Text(
+                    'New sheet',
+                    style: TextStyle(fontSize: 13, color: Palette.faint(dark)),
+                  ),
                 ],
               ),
             ),
@@ -127,7 +130,9 @@ class _SheetTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: selected ? Palette.fg(dark) : Palette.fg(dark).withValues(alpha: 0.75),
+                  color: selected
+                      ? Palette.fg(dark)
+                      : Palette.fg(dark).withValues(alpha: 0.75),
                 ),
               ),
             ),
