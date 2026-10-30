@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/document.dart';
@@ -8,12 +9,14 @@ class Sidebar extends StatefulWidget {
   final DocumentStore store;
   final bool dark;
   final VoidCallback onClose;
+  final ValueListenable<bool>? wheelBlocked;
 
   const Sidebar({
     super.key,
     required this.store,
     required this.dark,
     required this.onClose,
+    this.wheelBlocked,
   });
 
   @override
@@ -102,25 +105,31 @@ class _SidebarState extends State<Sidebar> {
           ),
           Divider(height: 1, color: Palette.hairline(_dark)),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              children: searching
-                  ? [
-                      if (matches.isEmpty) _note('No matches'),
-                      for (final s in matches) _sheetTile(s, showFolder: true),
-                    ]
-                  : [
-                      for (final f in _store.folders) ...[
-                        _folderRow(f),
-                        if (!_collapsed.contains(f.id))
-                          for (final s in _store.inFolder(f.id)) _sheetTile(s),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: widget.wheelBlocked ?? _neverSide,
+              builder: (context, blocked, _) => ListView(
+                physics: blocked ? const NeverScrollableScrollPhysics() : null,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                children: searching
+                    ? [
+                        if (matches.isEmpty) _note('No matches'),
+                        for (final s in matches)
+                          _sheetTile(s, showFolder: true),
+                      ]
+                    : [
+                        for (final f in _store.folders) ...[
+                          _folderRow(f),
+                          if (!_collapsed.contains(f.id))
+                            for (final s in _store.inFolder(f.id))
+                              _sheetTile(s),
+                        ],
+                        if (unfiled.isNotEmpty) ...[
+                          _unfiledRow(unfiled.length),
+                          if (_unfiledOpen || _store.folders.isEmpty)
+                            for (final s in unfiled) _sheetTile(s),
+                        ],
                       ],
-                      if (unfiled.isNotEmpty) ...[
-                        _unfiledRow(unfiled.length),
-                        if (_unfiledOpen || _store.folders.isEmpty)
-                          for (final s in unfiled) _sheetTile(s),
-                      ],
-                    ],
+              ),
             ),
           ),
           Divider(height: 1, color: Palette.hairline(_dark)),
@@ -468,3 +477,5 @@ class _SidebarState extends State<Sidebar> {
     return text.isEmpty ? null : text;
   }
 }
+
+final ValueNotifier<bool> _neverSide = ValueNotifier<bool>(false);

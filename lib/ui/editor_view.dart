@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
@@ -31,6 +32,9 @@ class EditorView extends StatefulWidget {
   final bool readOnly;
   final double scale;
   final bool showLineNumbers;
+
+  /// True while Ctrl is held, so the wheel can zoom instead of scrolling.
+  final ValueListenable<bool>? wheelBlocked;
   final Color? positiveColour;
   final Color? negativeColour;
 
@@ -53,6 +57,7 @@ class EditorView extends StatefulWidget {
     this.readOnly = false,
     this.scale = 1,
     this.showLineNumbers = true,
+    this.wheelBlocked,
     this.positiveColour,
     this.negativeColour,
   });

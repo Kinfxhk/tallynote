@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/main.dart';
@@ -249,6 +251,30 @@ void main() {
     await tester.pump();
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style?.fontSize, closeTo(22.5, 0.1));
+  });
+
+  testWidgets('Ctrl + wheel zooms the interface', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    final before = tester.widget<TextField>(editor).style!.fontSize!;
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+
+    GestureBinding.instance.handlePointerEvent(PointerScrollEvent(
+      position: tester.getCenter(editor),
+      scrollDelta: const Offset(0, -120),
+    ));
+    await tester.pumpAndSettle();
+
+    final after = tester.widget<TextField>(editor).style!.fontSize!;
+    expect(after, greaterThan(before));
+
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {

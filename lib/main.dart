@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +48,26 @@ class _AppState extends State<TallynoteApp> {
   bool _showTabs = true;
   final List<String> _tabs = [];
 
+  /// Ctrl/Cmd held: the wheel zooms instead of scrolling.
+  final ValueNotifier<bool> _zoomModifier = ValueNotifier(false);
+
+  bool _onKey(KeyEvent e) {
+    final down =
+        HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+    if (_zoomModifier.value != down) _zoomModifier.value = down;
+    return false;
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_zoomModifier.value) return;
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      _zoom(dy < 0 ? 1.1 : 1 / 1.1);
+    });
+  }
+
   /// non-null while a section is folded: the full document, set aside
   List<String>? _foldSource;
   Set<int> _foldedLines = {};
@@ -61,6 +82,7 @@ class _AppState extends State<TallynoteApp> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
     _engine = SheetEngine(rates: Rates.current);
     _controller.addListener(_onText);
     unawaited(_boot());
@@ -202,6 +224,8 @@ class _AppState extends State<TallynoteApp> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _zoomModifier.dispose();
     _saveTimer?.cancel();
     _controller.dispose();
     _store.dispose();
@@ -253,6 +277,7 @@ class _AppState extends State<TallynoteApp> {
     final sidebar = Sidebar(
       store: _store,
       dark: _dark,
+      wheelBlocked: _zoomModifier,
       onClose: wide ? _toggleSidebar : () => Navigator.of(context).maybePop(),
     );
 
@@ -306,217 +331,225 @@ class _AppState extends State<TallynoteApp> {
         },
         child: Focus(
           autofocus: true,
-          child: Scaffold(
-            key: _scaffoldKey,
-            drawer: wide ? null : Drawer(child: SafeArea(child: sidebar)),
-            body: SafeArea(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (wide && _sidebarOpen) ...[
-                    sidebar,
-                    VerticalDivider(width: 1, color: Palette.hairline(_dark)),
-                  ],
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _Header(
-                          dark: _dark,
-                          sidebarOpen: _sidebarOpen && wide,
-                          showMenu: !(wide && _sidebarOpen),
-                          onMenu: wide
-                              ? _toggleSidebar
-                              : () => _scaffoldKey.currentState?.openDrawer(),
-                          onSettings: () => showSettingsSheet(
-                            context: _navKey.currentContext!,
+          child: Listener(
+            onPointerSignal: _onPointerSignal,
+            child: Scaffold(
+              key: _scaffoldKey,
+              drawer: wide ? null : Drawer(child: SafeArea(child: sidebar)),
+              body: SafeArea(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (wide && _sidebarOpen) ...[
+                      sidebar,
+                      VerticalDivider(width: 1, color: Palette.hairline(_dark)),
+                    ],
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _Header(
                             dark: _dark,
-                            answersVisible: _answersVisible,
-                            autoRates: _autoRates,
-                            steps: _steps,
-                            signColours: _signColours,
-                            lineNumbers: _lineNumbers,
-                            showTabs: _showTabs,
-                            uiScale: _uiScale,
-                            posName: _posName,
-                            negName: _negName,
-                            onAnswers: (v) {
-                              setState(() => _answersVisible = v);
-                              _saveSettings();
-                            },
-                            onTheme: (v) {
-                              setState(() => _dark = v);
-                              _saveSettings();
-                            },
-                            onAutoRates: (v) {
-                              setState(() => _autoRates = v);
-                              _saveSettings();
-                            },
-                            onSteps: (v) {
-                              setState(() => _steps = v);
-                              _saveSettings();
-                            },
-                            onSignColours: (v) {
-                              setState(() => _signColours = v);
-                              _saveSettings();
-                            },
-                            onPosColour: (name) {
-                              setState(() => _posName = name);
-                              _saveSettings();
-                            },
-                            onNegColour: (name) {
-                              setState(() => _negName = name);
-                              _saveSettings();
-                            },
-                            onLineNumbers: (v) {
-                              setState(() => _lineNumbers = v);
-                              _saveSettings();
-                            },
-                            onShowTabs: (v) {
-                              setState(() => _showTabs = v);
-                              _saveSettings();
-                            },
-                            onUiScale: (v) {
-                              setState(() => _uiScale = v);
-                              _saveSettings();
-                            },
-                            onRefreshRates: () async {
-                              final ok = await Rates.refresh();
-                              if (!mounted) return false;
-                              setState(() {
-                                _engine = SheetEngine(rates: Rates.current);
-                                _recalc();
-                              });
-                              return ok;
-                            },
+                            sidebarOpen: _sidebarOpen && wide,
+                            showMenu: !(wide && _sidebarOpen),
+                            onMenu: wide
+                                ? _toggleSidebar
+                                : () => _scaffoldKey.currentState?.openDrawer(),
+                            onSettings: () => showSettingsSheet(
+                              context: _navKey.currentContext!,
+                              dark: _dark,
+                              answersVisible: _answersVisible,
+                              autoRates: _autoRates,
+                              steps: _steps,
+                              signColours: _signColours,
+                              lineNumbers: _lineNumbers,
+                              showTabs: _showTabs,
+                              uiScale: _uiScale,
+                              posName: _posName,
+                              negName: _negName,
+                              onAnswers: (v) {
+                                setState(() => _answersVisible = v);
+                                _saveSettings();
+                              },
+                              onTheme: (v) {
+                                setState(() => _dark = v);
+                                _saveSettings();
+                              },
+                              onAutoRates: (v) {
+                                setState(() => _autoRates = v);
+                                _saveSettings();
+                              },
+                              onSteps: (v) {
+                                setState(() => _steps = v);
+                                _saveSettings();
+                              },
+                              onSignColours: (v) {
+                                setState(() => _signColours = v);
+                                _saveSettings();
+                              },
+                              onPosColour: (name) {
+                                setState(() => _posName = name);
+                                _saveSettings();
+                              },
+                              onNegColour: (name) {
+                                setState(() => _negName = name);
+                                _saveSettings();
+                              },
+                              onLineNumbers: (v) {
+                                setState(() => _lineNumbers = v);
+                                _saveSettings();
+                              },
+                              onShowTabs: (v) {
+                                setState(() => _showTabs = v);
+                                _saveSettings();
+                              },
+                              onUiScale: (v) {
+                                setState(() => _uiScale = v);
+                                _saveSettings();
+                              },
+                              onRefreshRates: () async {
+                                final ok = await Rates.refresh();
+                                if (!mounted) return false;
+                                setState(() {
+                                  _engine = SheetEngine(rates: Rates.current);
+                                  _recalc();
+                                });
+                                return ok;
+                              },
+                            ),
                           ),
-                        ),
-                        Divider(height: 1, color: Palette.hairline(_dark)),
-                        if (_showTabs && _tabs.length > 1)
-                          _TabBar(
-                            dark: _dark,
-                            tabs: _tabs,
-                            activeId: _store.activeId,
-                            titleOf: (id) {
-                              final s = _store.sheets
-                                  .where((x) => x.id == id)
-                                  .firstOrNull;
-                              return s == null || s.title.isEmpty
-                                  ? 'Untitled'
-                                  : s.title;
-                            },
-                            onSelect: _store.select,
-                            onClose: _closeTab,
-                          ),
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: EditorView(
-                                  controller: _controller,
-                                  results: _results,
-                                  dark: _dark,
-                                  answersVisible: _answersVisible,
-                                  showSteps: _steps,
-                                  explain: _engine.explain,
-                                  answerWidth: _answerW,
-                                  scale: _uiScale,
-                                  showLineNumbers: _lineNumbers,
-                                  onInsertReference: _insertReference,
-                                  lineMap: _lineMap,
-                                  foldable: _foldable,
-                                  folded: _foldedLines,
-                                  onToggleFold: _toggleFold,
-                                  readOnly: _foldSource != null,
-                                  signColours: _signColours,
-                                  positiveColour: _posName.isEmpty
-                                      ? null
-                                      : Fmt.colours[_posName],
-                                  negativeColour: _negName.isEmpty
-                                      ? null
-                                      : Fmt.colours[_negName],
-                                  onAnswerWidth: (w) {
-                                    setState(() => _answerW = w);
-                                    _saveSettings();
-                                  },
-                                ),
-                              ),
-                              if (_hasSelection)
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 14,
-                                  child: Center(
-                                    child: _FormatBar(
-                                      dark: _dark,
-                                      onFormat: _format,
-                                    ),
+                          Divider(height: 1, color: Palette.hairline(_dark)),
+                          if (_showTabs && _tabs.length > 1)
+                            _TabBar(
+                              dark: _dark,
+                              tabs: _tabs,
+                              activeId: _store.activeId,
+                              titleOf: (id) {
+                                final s = _store.sheets
+                                    .where((x) => x.id == id)
+                                    .firstOrNull;
+                                return s == null || s.title.isEmpty
+                                    ? 'Untitled'
+                                    : s.title;
+                              },
+                              onSelect: _store.select,
+                              onClose: _closeTab,
+                            ),
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: EditorView(
+                                    controller: _controller,
+                                    results: _results,
+                                    dark: _dark,
+                                    answersVisible: _answersVisible,
+                                    showSteps: _steps,
+                                    explain: _engine.explain,
+                                    answerWidth: _answerW,
+                                    scale: _uiScale,
+                                    wheelBlocked: _zoomModifier,
+                                    showLineNumbers: _lineNumbers,
+                                    onInsertReference: _insertReference,
+                                    lineMap: _lineMap,
+                                    foldable: _foldable,
+                                    folded: _foldedLines,
+                                    onToggleFold: _toggleFold,
+                                    readOnly: _foldSource != null,
+                                    signColours: _signColours,
+                                    positiveColour: _posName.isEmpty
+                                        ? null
+                                        : Fmt.colours[_posName],
+                                    negativeColour: _negName.isEmpty
+                                        ? null
+                                        : Fmt.colours[_negName],
+                                    onAnswerWidth: (w) {
+                                      setState(() => _answerW = w);
+                                      _saveSettings();
+                                    },
                                   ),
                                 ),
-                              if (_answersVisible)
-                                Positioned(
-                                  top: 0,
-                                  bottom: 0,
-                                  right: _answerW + 24 - 5,
-                                  width: 10,
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.resizeColumn,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onHorizontalDragUpdate: (d) {
-                                        final widest = _results
-                                            .map((r) => r.display?.length ?? 0)
-                                            .fold<int>(
-                                              0,
-                                              (a, b) => a > b ? a : b,
-                                            );
-                                        final minW = (widest * 9.2 + 60).clamp(
-                                          140.0,
-                                          520.0,
-                                        );
-                                        setState(
-                                          () =>
-                                              _answerW = (_answerW - d.delta.dx)
-                                                  .clamp(minW, 520.0),
-                                        );
-                                      },
-                                      onHorizontalDragEnd: (_) =>
-                                          _saveSettings(),
-                                      onDoubleTap: () {
-                                        final widest = _results
-                                            .map((r) => r.display?.length ?? 0)
-                                            .fold<int>(
-                                              0,
-                                              (a, b) => a > b ? a : b,
-                                            );
-                                        setState(
-                                          () => _answerW = (widest * 9.2 + 44)
-                                              .clamp(140.0, 520.0),
-                                        );
-                                        _saveSettings();
-                                      },
-                                      child: Center(
-                                        child: Container(
-                                          width: 1,
-                                          color: Palette.hairline(_dark),
+                                if (_hasSelection)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 14,
+                                    child: Center(
+                                      child: _FormatBar(
+                                        dark: _dark,
+                                        onFormat: _format,
+                                      ),
+                                    ),
+                                  ),
+                                if (_answersVisible)
+                                  Positioned(
+                                    top: 0,
+                                    bottom: 0,
+                                    right: _answerW + 24 - 5,
+                                    width: 10,
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.resizeColumn,
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onHorizontalDragUpdate: (d) {
+                                          final widest = _results
+                                              .map(
+                                                (r) => r.display?.length ?? 0,
+                                              )
+                                              .fold<int>(
+                                                0,
+                                                (a, b) => a > b ? a : b,
+                                              );
+                                          final minW = (widest * 9.2 + 60)
+                                              .clamp(140.0, 520.0);
+                                          setState(
+                                            () => _answerW =
+                                                (_answerW - d.delta.dx).clamp(
+                                                  minW,
+                                                  520.0,
+                                                ),
+                                          );
+                                        },
+                                        onHorizontalDragEnd: (_) =>
+                                            _saveSettings(),
+                                        onDoubleTap: () {
+                                          final widest = _results
+                                              .map(
+                                                (r) => r.display?.length ?? 0,
+                                              )
+                                              .fold<int>(
+                                                0,
+                                                (a, b) => a > b ? a : b,
+                                              );
+                                          setState(
+                                            () => _answerW = (widest * 9.2 + 44)
+                                                .clamp(140.0, 520.0),
+                                          );
+                                          _saveSettings();
+                                        },
+                                        child: Center(
+                                          child: Container(
+                                            width: 1,
+                                            color: Palette.hairline(_dark),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        _StatusBar(
-                          dark: _dark,
-                          lines: _controller.text.split('\n').length,
-                          answers: _results
-                              .where((r) => r.display != null)
-                              .length,
-                        ),
-                      ],
+                          _StatusBar(
+                            dark: _dark,
+                            lines: _controller.text.split('\n').length,
+                            answers: _results
+                                .where((r) => r.display != null)
+                                .length,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
