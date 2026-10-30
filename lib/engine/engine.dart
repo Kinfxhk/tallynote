@@ -43,7 +43,19 @@ class SheetEngine {
         dates = DateParser(now: now),
         rates = rates ?? const {'USD': 1, 'HKD': 7.8};
 
+  /// Two passes: the first collects values per tag so `total of #tag` can be
+  /// answered on lines that appear above some of the tagged lines.
   List<LineResult> evaluate(List<String> lines) {
+    final tags = <String, List<Value>>{};
+    _run(lines, tags, collect: true);
+    return _run(lines, tags, collect: false);
+  }
+
+  List<LineResult> _run(
+    List<String> lines,
+    Map<String, List<Value>> tags, {
+    required bool collect,
+  }) {
     final results = <LineResult>[];
     final vars = <String, Value>{};
     final values = <Value?>[];
@@ -71,7 +83,11 @@ class SheetEngine {
         continue;
       }
 
-      final tag = _extractTag(trimmed);
+      // "total of #food" is a command, not a line tagged #food
+      final isTagTotal = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#',
+              caseSensitive: false)
+          .hasMatch(trimmed);
+      final tag = isTagTotal ? null : _extractTag(trimmed);
       final body = tag == null
           ? trimmed
           : trimmed.substring(0, trimmed.lastIndexOf('#')).trim();
@@ -84,8 +100,12 @@ class SheetEngine {
           sectionStart: sectionStart,
           current: i,
           tag: tag,
+          tags: tags,
         );
         values.add(value);
+        if (collect && tag != null && value != null) {
+          tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
+        }
         results.add(LineResult(
           text: raw,
           value: value,
@@ -93,11 +113,24 @@ class SheetEngine {
           tag: tag,
         ));
       } on UnresolvedWord {
-        values.add(null);
-        results.add(LineResult(text: raw, tag: tag));
+        // "午餐 120" is prose with a number in it: show the number.
+        final fallback = _loneNumber(body);
+        values.add(fallback);
+        if (collect && tag != null && fallback != null) {
+          tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
+        }
+        results.add(LineResult(
+          text: raw,
+          value: fallback,
+          display: fallback == null ? null : formatValue(fallback),
+          tag: tag,
+        ));
       } catch (e) {
         final fallback = _loneNumber(body);
         values.add(fallback);
+        if (collect && tag != null && fallback != null) {
+          tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
+        }
         results.add(LineResult(
           text: raw,
           value: fallback,
@@ -123,6 +156,7 @@ class SheetEngine {
     required List<Value?> values,
     required int sectionStart,
     required int current,
+    required Map<String, List<Value>> tags,
     String? tag,
   }) {
     final ctx = EvalContext(
@@ -156,8 +190,11 @@ class SheetEngine {
     final tagged = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#([\w\u4e00-\u9fff]+)$')
         .firstMatch(agg);
     if (tagged != null) {
-      // handled after the fact by the UI layer when tags are collected
-      return const ErrorValue('tagged total needs the tag pass');
+      final items = tags[tagged.group(1)!.toLowerCase()] ?? const <Value>[];
+      if (items.isEmpty) {
+        return ErrorValue('no lines tagged #${tagged.group(1)}');
+      }
+      return _aggregate('sum', items);
     }
 
     // rule of three: "9 is to 16 as 27 is to what"

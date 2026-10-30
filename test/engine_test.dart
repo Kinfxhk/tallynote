@@ -64,6 +64,16 @@ void main() {
     expect(one('March 12 + 3 weeks 2 days'), '4 April 2027');
   });
 
+  test('tagged subtotal', () {
+    final r = engine.evaluate([
+      '午餐 120 #food',
+      '晚餐 280 #food',
+      '車費 50 #transport',
+      'total of #food',
+    ]);
+    expect(r[3].display, '400');
+  });
+
   test('text lines stay quiet', () {
     expect(one('hello world'), isNull);
   });
