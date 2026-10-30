@@ -44,6 +44,15 @@ out-feature Soulver on live data; out-ship it on the surfaces it refuses.
 6. **Note management is the long game.** Thousands of short notes need search,
    folders and deletion-with-undo, not more operators.
 
+## Shipped since this list was written
+
+Number-format settings (US/EU), unit "ideal form" (`3 min × 15 mph` → 0.75 mi),
+search + folders, export Markdown/CSV/text, print to PDF, open / save-a-copy
+files, English + 繁體 + 简体, whole-app zoom, workdays and spoken durations
+(`today + 3 workdays`, `2h 30m + 45m`), and an installable offline web app.
+Still open below: tap-to-insert reference, autocomplete, scrubbing, quick
+capture, subtotal as a first-class line.
+
 ## Backlog, ranked by evidence
 
 ### P0 — small, and every competitor needed it

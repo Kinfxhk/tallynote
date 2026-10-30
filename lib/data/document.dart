@@ -174,14 +174,20 @@ class DocumentStore extends ChangeNotifier {
     // the backup is all that is left of the damaged store: do not bury it
     if (_keepBackup) return;
     final prefs = await SharedPreferences.getInstance();
-    final ok = await prefs.setString(
-      _key,
-      jsonEncode({
-        'v': 2,
-        'folders': folders.map((f) => f.toJson()).toList(),
-        'sheets': sheets.map((s) => s.toJson()).toList(),
-      }),
-    );
+    var ok = false;
+    try {
+      ok = await prefs.setString(
+        _key,
+        jsonEncode({
+          'v': 2,
+          'folders': folders.map((f) => f.toJson()).toList(),
+          'sheets': sheets.map((s) => s.toJson()).toList(),
+        }),
+      );
+    } catch (e) {
+      // a full quota or a private window can throw instead of returning false
+      debugPrint('tallynote: save failed: $e');
+    }
     if (!ok && !saveFailed) {
       saveFailed = true;
       notifyListeners();
