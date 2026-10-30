@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/data/document.dart';
 import 'package:tallynote/main.dart';
+import 'package:tallynote/ui/editor_view.dart';
 
 void main() {
   const key = 'tallynote.sheets.v1';
@@ -118,6 +119,14 @@ void main() {
     expect(find.text('Q4 budget'), findsOneWidget);
     expect(find.text('Loose note'), findsOneWidget);
     expect(find.text('Unfiled'), findsOneWidget);
+
+    // tapping a sheet through Pressable still selects and loads it
+    await tester.tap(find.text('Q4 budget'));
+    await tester.pump(const Duration(milliseconds: 60));
+    final editor = tester.widget<TextField>(
+      find.descendant(of: find.byType(EditorView), matching: find.byType(TextField)),
+    );
+    expect(editor.controller?.text, '1+1');
   });
 
   test('a v1 sheet list still loads', () async {
