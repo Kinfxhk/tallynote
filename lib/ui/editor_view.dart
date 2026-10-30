@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
+import '../engine/values.dart';
 import 'feedback.dart';
 import 'theme.dart';
 
@@ -17,6 +18,11 @@ class EditorView extends StatefulWidget {
   final bool answersVisible;
   final List<String> Function(String line)? explain;
   final bool showSteps;
+  final double answerWidth;
+  final ValueChanged<double>? onAnswerWidth;
+  final bool signColours;
+  final Color? positiveColour;
+  final Color? negativeColour;
 
   const EditorView({
     super.key,
@@ -26,6 +32,11 @@ class EditorView extends StatefulWidget {
     this.answersVisible = true,
     this.explain,
     this.showSteps = true,
+    this.answerWidth = 212,
+    this.onAnswerWidth,
+    this.signColours = true,
+    this.positiveColour,
+    this.negativeColour,
   });
 
   @override
@@ -63,14 +74,17 @@ class _EditorViewState extends State<EditorView> {
   Widget build(BuildContext context) {
     final style = editorStyle(widget.dark);
     const stepGutter = 30.0; // finger-sized, but the icon stays small
-    final answerW = widget.answersVisible ? 212.0 : 0.0;
+    final answerW = widget.answersVisible ? widget.answerWidth : 0.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final text = widget.controller.text;
         final textWidth = constraints.maxWidth - answerW - 48;
         final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
-        final metrics = _columnMetrics(widget.results);
+        final metrics = _columnMetrics(
+          widget.results,
+          available: answerW - stepGutter - 10,
+        );
 
         return SingleChildScrollView(
           controller: _scroll,
@@ -129,21 +143,24 @@ class _EditorViewState extends State<EditorView> {
                                   )
                                 : null,
                           ),
-                          _tapForSteps(
-                            line: widget.results[i].text,
-                            canExplain:
-                                widget.showSteps &&
-                                widget.explain != null &&
-                                _hasOperators(widget.results[i].text),
-                            child: _AnswerCell(
-                              display: widget.results[i].display!,
-                              style: answerStyle(widget.dark).copyWith(
-                                color: widget.results[i].error != null
-                                    ? Palette.answer(widget.dark)
-                                          .withValues(alpha: 0.6)
-                                    : null,
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: _tapForSteps(
+                                line: widget.results[i].text,
+                                canExplain:
+                                    widget.showSteps &&
+                                    widget.explain != null &&
+                                    _hasOperators(widget.results[i].text),
+                                child: _AnswerCell(
+                                  display: widget.results[i].display!,
+                                  style: answerStyle(widget.dark).copyWith(
+                                    color: _answerColour(widget.results[i]),
+                                  ),
+                                  metrics: metrics,
+                                ),
                               ),
-                              metrics: metrics,
                             ),
                           ),
                         ],
@@ -158,7 +175,7 @@ class _EditorViewState extends State<EditorView> {
 
   /// Character counts needed to line the decimal points up. Widths are exact
   /// because the answer style is monospace with tabular figures.
-  _ColumnMetrics _columnMetrics(List<LineResult> results) {
+  _ColumnMetrics _columnMetrics(List<LineResult> results, {double? available}) {
     var maxHead = 0;
     var maxFrac = 0;
     for (final r in results) {
@@ -172,7 +189,14 @@ class _EditorViewState extends State<EditorView> {
         maxHead = math.max(maxHead, d.length);
       }
     }
-    return _ColumnMetrics(maxHead, maxFrac, _charWidth());
+    final charW = _charWidth();
+    // when the column is tight, drop decimals before shrinking the text
+    if (available != null) {
+      while (maxFrac > 0 && charW * (maxHead + 1 + maxFrac) > available) {
+        maxFrac--;
+      }
+    }
+    return _ColumnMetrics(maxHead, maxFrac, charW);
   }
 
   double _charWidth() {
@@ -190,6 +214,25 @@ class _EditorViewState extends State<EditorView> {
   /// Mirrors SheetEngine.explain: two or more operations is "complex".
   static bool _hasOperators(String line) =>
       RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
+
+  /// Negative in red, positive in green — both overridable in Settings.
+  Color? _answerColour(LineResult r) {
+    if (r.error != null) {
+      return Palette.answer(widget.dark).withValues(alpha: 0.6);
+    }
+    if (!widget.signColours) return null;
+    final v = r.value;
+    final n = switch (v) {
+      NumValue(:final value) => value,
+      MoneyValue(:final value) => value,
+      PercentValue(:final ratio) => ratio,
+      _ => null,
+    };
+    if (n == null || n == 0) return null;
+    return n < 0
+        ? (widget.negativeColour ?? Palette.negative(widget.dark))
+        : (widget.positiveColour ?? Palette.positive(widget.dark));
+  }
 
   /// The whole answer cell is the tap target on phones — the chevron is a
   /// hint, not a 16px button.

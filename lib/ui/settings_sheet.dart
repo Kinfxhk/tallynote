@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/rates.dart';
+import 'feedback.dart';
+import 'formatting.dart';
 import 'theme.dart';
 
 /// Every switch that is not part of typing lives here.
@@ -11,10 +13,16 @@ Future<void> showSettingsSheet({
   required bool answersVisible,
   required bool autoRates,
   required bool steps,
+  required bool signColours,
+  required String posName,
+  required String negName,
   required ValueChanged<bool> onAnswers,
   required ValueChanged<bool> onTheme,
   required ValueChanged<bool> onAutoRates,
   required ValueChanged<bool> onSteps,
+  required ValueChanged<bool> onSignColours,
+  required ValueChanged<String> onPosColour,
+  required ValueChanged<String> onNegColour,
   required Future<bool> Function() onRefreshRates,
 }) {
   // local copies so repeated taps in the sheet stay consistent
@@ -22,6 +30,9 @@ Future<void> showSettingsSheet({
   var localDark = dark;
   var localRates = autoRates;
   var localSteps = steps;
+  var localSign = signColours;
+  var localPos = posName;
+  var localNeg = negName;
 
   return showModalBottomSheet<void>(
     context: context,
@@ -62,6 +73,41 @@ Future<void> showSettingsSheet({
                 trailing,
               ],
             ),
+          ),
+        );
+
+        Widget colourRow(
+          String label,
+          String current,
+          ValueChanged<String> onPick,
+        ) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 96,
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 13.5, color: Palette.fg(dark)),
+                ),
+              ),
+              for (final entry in Fmt.colours.entries)
+                Pressable(
+                  onTap: () => onPick(entry.key),
+                  padding: const EdgeInsets.all(6),
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: entry.value,
+                      shape: BoxShape.circle,
+                      border: entry.key == current
+                          ? Border.all(color: Palette.fg(dark), width: 2)
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
 
@@ -118,6 +164,32 @@ Future<void> showSettingsSheet({
                     setSheet(() {});
                   },
                 ),
+                row(
+                  'Sign colours',
+                  'Negative red, positive green',
+                  plus(localSign, (v) {
+                    localSign = v;
+                    onSignColours(v);
+                    setSheet(() {});
+                  }),
+                  onTap: () {
+                    localSign = !localSign;
+                    onSignColours(localSign);
+                    setSheet(() {});
+                  },
+                ),
+                if (localSign) ...[
+                  colourRow('Positive', localPos, (name) {
+                    localPos = name;
+                    onPosColour(name);
+                    setSheet(() {});
+                  }),
+                  colourRow('Negative', localNeg, (name) {
+                    localNeg = name;
+                    onNegColour(name);
+                    setSheet(() {});
+                  }),
+                ],
                 row(
                   'Step breakdown',
                   'Show steps beside complex answers',

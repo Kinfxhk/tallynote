@@ -16,6 +16,10 @@ class Palette {
   static Color bg(bool dark) => dark ? paperDark : paper;
   static Color fg(bool dark) => dark ? inkDark : ink;
   static Color answer(bool dark) => dark ? accentDark : accent;
+  static Color positive(bool dark) =>
+      dark ? const Color(0xFF8FBF7E) : const Color(0xFF3F7A46);
+  static Color negative(bool dark) =>
+      dark ? const Color(0xFFE08A72) : const Color(0xFFAC3F2A);
   static Color faint(bool dark) => dark ? mutedDark : muted;
   static Color hairline(bool dark) => dark ? ruleDark : rule;
 }

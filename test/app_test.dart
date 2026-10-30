@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/main.dart';
 import 'package:tallynote/ui/editor_view.dart';
+import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
 void main() {
@@ -101,6 +102,27 @@ void main() {
         reason: 'head $head should end at the decimal column',
       );
     }
+  });
+
+  testWidgets('negative answers are red, positive green', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editor, '5-10\n2+3');
+    await tester.pump(const Duration(milliseconds: 60));
+
+    Color? colourOf(String data) {
+      final t = tester
+          .widgetList<Text>(find.byType(Text))
+          .where((w) => w.data == data)
+          .firstOrNull;
+      return t?.style?.color;
+    }
+
+    expect(colourOf('-5'), Palette.negative(false));
+    expect(colourOf('5'), Palette.positive(false));
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {

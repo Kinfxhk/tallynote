@@ -40,6 +40,10 @@ class _AppState extends State<TallynoteApp> {
   bool _answersVisible = true;
   bool _autoRates = true;
   bool _steps = true;
+  double _answerW = 212;
+  bool _signColours = true;
+  String _posName = ''; // empty = the built-in paper-and-ink colours
+  String _negName = '';
   bool _syncing = false;
   Timer? _saveTimer;
   String? _boundSheetId;
@@ -58,6 +62,10 @@ class _AppState extends State<TallynoteApp> {
     _answersVisible = prefs.getBool('tallynote.answers') ?? true;
     _autoRates = prefs.getBool('tallynote.autoRates') ?? true;
     _steps = prefs.getBool('tallynote.steps') ?? true;
+    _answerW = prefs.getDouble('tallynote.answerWidth') ?? 212;
+    _signColours = prefs.getBool('tallynote.signColours') ?? true;
+    _posName = prefs.getString('tallynote.posColour') ?? '';
+    _negName = prefs.getString('tallynote.negColour') ?? '';
 
     await _store.load();
     _store.addListener(_onStore);
@@ -133,6 +141,10 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.answers', _answersVisible);
     await prefs.setBool('tallynote.autoRates', _autoRates);
     await prefs.setBool('tallynote.steps', _steps);
+    await prefs.setDouble('tallynote.answerWidth', _answerW);
+    await prefs.setBool('tallynote.signColours', _signColours);
+    await prefs.setString('tallynote.posColour', _posName);
+    await prefs.setString('tallynote.negColour', _negName);
   }
 
   bool get _hasSelection =>
@@ -213,6 +225,9 @@ class _AppState extends State<TallynoteApp> {
                             answersVisible: _answersVisible,
                             autoRates: _autoRates,
                             steps: _steps,
+                            signColours: _signColours,
+                            posName: _posName,
+                            negName: _negName,
                             onAnswers: (v) {
                               setState(() => _answersVisible = v);
                               _saveSettings();
@@ -227,6 +242,18 @@ class _AppState extends State<TallynoteApp> {
                             },
                             onSteps: (v) {
                               setState(() => _steps = v);
+                              _saveSettings();
+                            },
+                            onSignColours: (v) {
+                              setState(() => _signColours = v);
+                              _saveSettings();
+                            },
+                            onPosColour: (name) {
+                              setState(() => _posName = name);
+                              _saveSettings();
+                            },
+                            onNegColour: (name) {
+                              setState(() => _negName = name);
                               _saveSettings();
                             },
                             onRefreshRates: () async {
@@ -244,13 +271,68 @@ class _AppState extends State<TallynoteApp> {
                         if (_hasSelection)
                           _FormatBar(dark: _dark, onFormat: _format),
                         Expanded(
-                          child: EditorView(
-                            controller: _controller,
-                            results: _results,
-                            dark: _dark,
-                            answersVisible: _answersVisible,
-                            showSteps: _steps,
-                            explain: _engine.explain,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: EditorView(
+                                  controller: _controller,
+                                  results: _results,
+                                  dark: _dark,
+                                  answersVisible: _answersVisible,
+                                  showSteps: _steps,
+                                  explain: _engine.explain,
+                                  answerWidth: _answerW,
+                                  signColours: _signColours,
+                                  positiveColour: _posName.isEmpty ? null : Fmt.colours[_posName],
+                                  negativeColour: _negName.isEmpty ? null : Fmt.colours[_negName],
+                                  onAnswerWidth: (w) {
+                                    setState(() => _answerW = w);
+                                    _saveSettings();
+                                  },
+                                ),
+                              ),
+                              if (_answersVisible)
+                                Positioned(
+                                  top: 0,
+                                  bottom: 0,
+                                  right: _answerW + 24 - 5,
+                                  width: 10,
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.resizeColumn,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.translucent,
+                                      onHorizontalDragUpdate: (d) {
+                                        setState(
+                                          () =>
+                                              _answerW = (_answerW - d.delta.dx)
+                                                  .clamp(140.0, 520.0),
+                                        );
+                                      },
+                                      onHorizontalDragEnd: (_) =>
+                                          _saveSettings(),
+                                      onDoubleTap: () {
+                                        final widest = _results
+                                            .map((r) => r.display?.length ?? 0)
+                                            .fold<int>(
+                                              0,
+                                              (a, b) => a > b ? a : b,
+                                            );
+                                        setState(
+                                          () => _answerW = (widest * 9.2 + 44)
+                                              .clamp(140.0, 520.0),
+                                        );
+                                        _saveSettings();
+                                      },
+                                      child: Center(
+                                        child: Container(
+                                          width: 1,
+                                          color: Palette.hairline(_dark),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         _StatusBar(
