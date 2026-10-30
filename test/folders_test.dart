@@ -99,10 +99,20 @@ void main() {
         {'id': 'f1', 'name': 'Work'},
       ],
       'sheets': [
-        {'id': 's1', 'title': 'Q4 budget', 'content': '1+1', 'folderId': 'f1',
-         'updated': '2026-10-30T00:00:00.000Z'},
-        {'id': 's2', 'title': 'Loose note', 'content': '2+2', 'folderId': null,
-         'updated': '2026-10-30T00:00:00.000Z'},
+        {
+          'id': 's1',
+          'title': 'Q4 budget',
+          'content': '1+1',
+          'folderId': 'f1',
+          'updated': '2026-10-30T00:00:00.000Z',
+        },
+        {
+          'id': 's2',
+          'title': 'Loose note',
+          'content': '2+2',
+          'folderId': null,
+          'updated': '2026-10-30T00:00:00.000Z',
+        },
       ],
     });
     SharedPreferences.setMockInitialValues({key: seed});
@@ -124,7 +134,10 @@ void main() {
     await tester.tap(find.text('Q4 budget'));
     await tester.pump(const Duration(milliseconds: 60));
     final editor = tester.widget<TextField>(
-      find.descendant(of: find.byType(EditorView), matching: find.byType(TextField)),
+      find.descendant(
+        of: find.byType(EditorView),
+        matching: find.byType(TextField),
+      ),
     );
     expect(editor.controller?.text, '1+1');
   });

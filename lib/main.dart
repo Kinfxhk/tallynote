@@ -283,8 +283,12 @@ class _AppState extends State<TallynoteApp> {
                                   explain: _engine.explain,
                                   answerWidth: _answerW,
                                   signColours: _signColours,
-                                  positiveColour: _posName.isEmpty ? null : Fmt.colours[_posName],
-                                  negativeColour: _negName.isEmpty ? null : Fmt.colours[_negName],
+                                  positiveColour: _posName.isEmpty
+                                      ? null
+                                      : Fmt.colours[_posName],
+                                  negativeColour: _negName.isEmpty
+                                      ? null
+                                      : Fmt.colours[_negName],
                                   onAnswerWidth: (w) {
                                     setState(() => _answerW = w);
                                     _saveSettings();
@@ -302,10 +306,20 @@ class _AppState extends State<TallynoteApp> {
                                     child: GestureDetector(
                                       behavior: HitTestBehavior.translucent,
                                       onHorizontalDragUpdate: (d) {
+                                        final widest = _results
+                                            .map((r) => r.display?.length ?? 0)
+                                            .fold<int>(
+                                              0,
+                                              (a, b) => a > b ? a : b,
+                                            );
+                                        final minW = (widest * 9.2 + 60).clamp(
+                                          140.0,
+                                          520.0,
+                                        );
                                         setState(
                                           () =>
                                               _answerW = (_answerW - d.delta.dx)
-                                                  .clamp(140.0, 520.0),
+                                                  .clamp(minW, 520.0),
                                         );
                                       },
                                       onHorizontalDragEnd: (_) =>
@@ -445,14 +459,23 @@ class _StatusBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            '$lines lines · $answers answers',
-            style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+          Flexible(
+            child: Text(
+              '$lines lines · $answers answers',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+            ),
           ),
-          const Spacer(),
-          Text(
-            'rates $rateDate',
-            style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              'rates $rateDate',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 11, color: Palette.faint(dark)),
+            ),
           ),
         ],
       ),
@@ -483,46 +506,48 @@ class _FormatBar extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Palette.hairline(dark))),
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          btn('B', base.copyWith(fontWeight: FontWeight.w700), '**', '**'),
-          btn('I', base.copyWith(fontStyle: FontStyle.italic), '_', '_'),
-          btn(
-            'S',
-            base.copyWith(decoration: TextDecoration.lineThrough),
-            '~~',
-            '~~',
-          ),
-          btn(
-            'U',
-            base.copyWith(decoration: TextDecoration.underline),
-            '__',
-            '__',
-          ),
-          const SizedBox(width: 6),
-          for (final entry in Fmt.colours.entries)
-            Pressable(
-              onTap: () => onFormat('{${entry.key}}', '{/}'),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: entry.value,
-                    shape: BoxShape.circle,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
+          children: [
+            const SizedBox(width: 8),
+            btn('B', base.copyWith(fontWeight: FontWeight.w700), '**', '**'),
+            btn('I', base.copyWith(fontStyle: FontStyle.italic), '_', '_'),
+            btn(
+              'S',
+              base.copyWith(decoration: TextDecoration.lineThrough),
+              '~~',
+              '~~',
+            ),
+            btn(
+              'U',
+              base.copyWith(decoration: TextDecoration.underline),
+              '__',
+              '__',
+            ),
+            const SizedBox(width: 6),
+            for (final entry in Fmt.colours.entries)
+              Pressable(
+                onTap: () => onFormat('{${entry.key}}', '{/}'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 9,
+                  ),
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: entry.value,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               ),
-            ),
-          const Spacer(),
-          Text(
-            'selection',
-            style: TextStyle(fontSize: 10, color: Palette.faint(dark)),
-          ),
-          const SizedBox(width: 10),
-        ],
+            const SizedBox(width: 10),
+          ],
+        ),
       ),
     );
   }
