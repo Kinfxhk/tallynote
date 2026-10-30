@@ -191,6 +191,12 @@ class _AppState extends State<TallynoteApp> {
   void _bindSheet() {
     final sheet = _store.active;
     if (sheet == null) return;
+    // do not let a pending debounce land in the sheet we are opening
+    if ((_saveTimer?.isActive ?? false) && _boundSheetId != sheet.id) {
+      _saveTimer!.cancel();
+      _persist(_boundSheetId!, _contentToSave);
+      _dirty = false;
+    }
     _boundSheetId = sheet.id;
     _syncing = true;
     _foldSource = null;
@@ -201,6 +207,26 @@ class _AppState extends State<TallynoteApp> {
     _recalc();
   }
 
+  /// What the sheet actually contains: while a section is folded the editor
+  /// shows a projection, so the saved text must come from the full source.
+  String get _contentToSave => _foldSource?.join('\n') ?? _controller.text;
+
+  void _persist(String id, String content) {
+    final firstLine = content
+        .split('\n')
+        .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
+        .replaceAll(RegExp(r'^#\s*'), '')
+        .trim();
+    final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
+    _store.update(
+      id,
+      content: content,
+      title: sheet?.customTitle == true
+          ? null
+          : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
+    );
+  }
+
   void _onText() {
     _recalc();
     if (_syncing) return;
@@ -208,20 +234,9 @@ class _AppState extends State<TallynoteApp> {
     if (id == null) return;
     if (!_dirty) setState(() => _dirty = true);
     _saveTimer?.cancel();
+    final content = _contentToSave;
     _saveTimer = Timer(const Duration(milliseconds: 400), () {
-      final firstLine = _controller.text
-          .split('\n')
-          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
-          .replaceAll(RegExp(r'^#\s*'), '')
-          .trim();
-      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
-      _store.update(
-        id,
-        content: _controller.text,
-        title: sheet?.customTitle == true
-            ? null
-            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
-      );
+      _persist(id, content);
       if (mounted) {
         setState(() {
           _dirty = false;
@@ -247,21 +262,7 @@ class _AppState extends State<TallynoteApp> {
   void _saveNow() {
     _saveTimer?.cancel();
     final id = _store.activeId;
-    if (id != null) {
-      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
-      final firstLine = _controller.text
-          .split('\n')
-          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
-          .replaceAll(RegExp(r'^#\s*'), '')
-          .trim();
-      _store.update(
-        id,
-        content: _controller.text,
-        title: sheet?.customTitle == true
-            ? null
-            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
-      );
-    }
+    if (id != null) _persist(id, _contentToSave);
     setState(() {
       _lastSaved = DateTime.now();
       _dirty = false;
