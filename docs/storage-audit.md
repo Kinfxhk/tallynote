@@ -9,6 +9,8 @@
 
 ---
 
+> 更新（2026-10-30 晚）：下面 P0–P2 已實作並出咗 v0.3.0；P3（真正「檔案即文件」）仍未做。
+
 ## 1. 逐項對照
 
 | 你問嘅 | 狀態 | 實際情況 | 位置 |
@@ -17,11 +19,11 @@
 | | ✅ | 摺疊區塊時存**完整源文**，唔會存摺疊後嘅投影 | `_contentToSave` |
 | | ✅ | 損壞 JSON → 抄去 `tallynote.sheets.v1.bak`、`_keepBackup` 阻止覆寫 | `document.dart:150` |
 | **格式（存成咩）** | ⚠️ 只有一種 | 內部 JSON：`{v:2, folders:[…], sheets:[{id,title,content,folderId,pinned,customTitle,updated}]}`；key `tallynote.sheets.v1` | `document.dart:168` |
-| | ❌ | 冇 Markdown／CSV／TXT／PDF；冇 `.tallynote` 檔案 | — |
-| **另存檔（Save As）** | ⚠️ 只係 app 內 | ⌘/Ctrl+⇧D 複製一個新 sheet（標題加 `(copy)`），**唔係檔案** | `document.dart` `duplicate()` |
-| **開舊檔（外部檔案）** | ❌ 冇 | GUI 完全冇 import；只有 CLI `tallynote -f note.txt` 讀純文字逐行計 | `bin/tallynote.dart:87` |
+| | ✅ | File → Export Markdown／CSV／純文字；`.tallynote` 檔案（同一 JSON schema，帶 app 標記） | — |
+| **另存檔（Save As）** | ✅ 已做 | File → Save a copy… 存 `.tallynote`（file_picker，全平台） | ⌘/Ctrl+⇧D 複製一個新 sheet（標題加 `(copy)`），**唔係檔案** | `document.dart` `duplicate()` |
+| **開舊檔（外部檔案）** | ✅ 已做 | File → Open file… 匯入 `.tallynote`／`.json`，id 全部重生唔會覆寫 | GUI 完全冇 import；只有 CLI `tallynote -f note.txt` 讀純文字逐行計 | `bin/tallynote.dart:87` |
 | **開新檔** | ⚠️ 只有「新 sheet」 | `⌘N` / 「New sheet」建立空白 sheet；冇「新檔案」概念 | `main.dart` / `sidebar.dart` |
-| **Print** | ❌ 完全冇 | 冇 `printing`/`pdf` 依賴、冇任何列印或輸出 PDF 路徑 | — |
+| **Print** | ✅ 已做 | File → Print / PDF…（printing + pdf，A4、等寬、答案右對齊） | 冇 `printing`/`pdf` 依賴、冇任何列印或輸出 PDF 路徑 | — |
 | **備份／還原** | ⚠️ 半套 | 只有「壞檔自動 .bak」；冇手動「匯出備份」「匯入備份」 | `document.dart:150` |
 | **多檔／工作區** | ❌ | 所有 sheet 放同一個 store，冇「一個檔案 = 一組 sheet」 | — |
 | **匯率快取** | ✅ | `tallynote.rates.v1` + `tallynote.rates.date.v1` | `rates.dart` |

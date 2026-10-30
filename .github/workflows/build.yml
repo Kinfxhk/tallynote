@@ -70,6 +70,7 @@ jobs:
           Architecture: amd64
           Installed-Size: $INSTALLED
           Depends: libgtk-3-0, libblkid1, liblzma5
+          Recommends: xdg-desktop-portal
           Maintainer: KinFx <kinfxhk@gmail.com>
           Homepage: https://github.com/Kinfxhk/tallynote
           Description: Notepad calculator - the notepad that adds up
