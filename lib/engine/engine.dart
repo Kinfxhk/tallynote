@@ -184,7 +184,11 @@ class SheetEngine {
           leafAt: leafAt,
         );
         values.add(value);
-        leafAt.add(value is ErrorValue || _isAggregateLine(body) ? null : value);
+        leafAt.add(value is ErrorValue ||
+                _isAggregateLine(body) ||
+                _isSummaryLabel(body)
+            ? null
+            : value);
         if (collect && tag != null && value != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
         }
@@ -241,6 +245,17 @@ class SheetEngine {
         RegExp(r'^(?:total|sum|subtotal)\s+of\s+#').hasMatch(a);
   }
 
+  /// "Total expenses: …", "Overall net: …" are summary lines: the grand total
+  /// must not add them on top of the rows they summarise.
+  static bool _isSummaryLabel(String body) {
+    final i = body.indexOf(':');
+    if (i <= 0) return false;
+    final label = body.substring(0, i).toLowerCase();
+    if (!RegExp(r'[a-z\u4e00-\u9fff]').hasMatch(label)) return false;
+    return RegExp(r'total|subtotal|net\b|balance|合計|小計|總計|總額|淨|結餘')
+        .hasMatch(label);
+  }
+
   bool _isComment(String s) => s.startsWith('#');
 
   String? _extractTag(String s) {
@@ -264,6 +279,15 @@ class SheetEngine {
       vars: vars,
       rates: rates,
     );
+
+    // "Topstep: −$10,408.52" — a label in front of the value
+    final label = RegExp(r'^([^:]{1,60}):\s*(.+)$').firstMatch(body);
+    if (label != null &&
+        RegExp(r'[A-Za-z\u4e00-\u9fff]').hasMatch(label.group(1)!)) {
+      final v = _parseValue(label.group(2)!.trim(), ctx,
+          values: values, sectionStart: sectionStart, current: current);
+      if (v != null && v is! ErrorValue) return v;
+    }
 
     // assignment: "rent = 2500", "total cost = $750"
     final assign = RegExp(r'^([^=<>!]+?)\s*=\s*([^=].*)$').firstMatch(body);

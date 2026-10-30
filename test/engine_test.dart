@@ -78,7 +78,7 @@ void main() {
     expect(s2[4].display, '300');
 
     final s3 = engine.evaluate([r'$10', r'$20', '總共']);
-    expect(s3[2].display, r'$30');
+    expect(s3[2].display, r'$30.00');
   });
 
   test('balance sheet: section subtotals then a grand total', () {
@@ -116,7 +116,7 @@ void main() {
 
   test('x as multiplication and trailing words', () {
     expect(one('4300 x 30%'), '1,290');
-    expect(one(r'$500 x 3'), r'$1,500');
+    expect(one(r'$500 x 3'), r'$1,500.00');
   });
 
   test('chinese operators', () {
@@ -182,6 +182,31 @@ void main() {
     expect(engine.explain('120 + 80'), isEmpty);
     // prose prefix and tag are stripped, same read-past rule as answers
     expect(engine.explain('午餐 120 + 80 * 2 #food').first, '80 * 2 = 160');
+  });
+
+  test('pasted P&L note: labels, unicode minus, cents, cross-check', () {
+    final r = engine.evaluate([
+      r'Take Profit Trader: +$9,623.00',
+      r'Topstep: −$10,408.52',
+      r'Tradeify: −$5,038.50',
+      r'Vest: −$3,383.80',
+      r'My Funded Futures: −$1,054.02',
+      r'Lucid: −$935.90',
+      r'Sim2Funded: −$232.00',
+      r'Apex: −$214.40',
+      r'TradeSyncer software: −$590.96',
+      r'Total expenses: $65,397.03',
+      r'Total payouts and credited profits: $53,161.93',
+      r'Overall net: −$12,235.10',
+      '(Live trading excluded)',
+      '合共',
+    ]);
+    expect(r[0].display, r'$9,623.00');
+    expect(r[1].display, r'-$10,408.52'); // unicode minus kept its sign
+    expect(r[6].display, r'-$232.00'); // label with a digit still parses
+    expect(r[12].display, isNull); // prose in brackets stays quiet
+    // the grand total reproduces the note's own net: -12,235.10
+    expect(r[13].display, r'-$12,235.10');
   });
 
   test('text lines stay quiet', () {

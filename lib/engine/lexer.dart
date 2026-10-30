@@ -63,6 +63,17 @@ class Lexer {
         out.add(Token(TokType.comma, ',', _i++));
         continue;
       }
+      // people paste − (U+2212), – and － from other apps
+      const dashVariants = {'−', '–', '—', '－'};
+      const plusVariants = {'＋'};
+      if (dashVariants.contains(c)) {
+        out.add(Token(TokType.op, '-', _i++));
+        continue;
+      }
+      if (plusVariants.contains(c)) {
+        out.add(Token(TokType.op, '+', _i++));
+        continue;
+      }
       out.add(Token(TokType.op, c, _i++));
     }
     return out;

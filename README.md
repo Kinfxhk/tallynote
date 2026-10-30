@@ -50,7 +50,8 @@ nothing is counted twice.
 - **Variables and references** — `total cost = $750`, `prev`, `line 3`. Change a value and every answer below updates.
 - **Aggregates** — `sum`, `average`, `count`, `min`, `max` per section.
 - **Tags and subtotals** — tag any line with `#food`, then `total of #food`.
-- **Grand total** — `grand total` / `合共` / `總共` adds every answer above the line, grouped by unit (`6.36 kg, 2 m` rather than a fake single number).
+- **Grand total** — `grand total` / `合共` / `總共` adds every answer above the line, grouped by unit (`6.36 kg, 2 m` rather than a fake single number). Lines labelled *Total / Net / 合計* are treated as summaries and never counted twice.
+- **Paste-friendly** — `Topstep: −$10,408.52` keeps its label out of the way, the unicode minus keeps its sign, and money always shows cents.
 - **Units** — length, mass, area, volume, speed, time, data, angle, temperature; mixed units convert automatically (`5 kg + 3 lb`).
 - **Currency** — ISO codes and symbols, daily ECB rates via frankfurter.app, cached for offline use.
 - **Dates and time** — calendar math, durations, timezone conversion.

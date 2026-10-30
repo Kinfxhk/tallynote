@@ -90,11 +90,14 @@ const Map<String, String> currencyAliases = {
 String formatNumber(double v, {int? decimals}) {
   if (v.isNaN) return 'NaN';
   if (v.isInfinite) return v > 0 ? '∞' : '-∞';
-  if (v == 0) return '0';
+  if (v == 0 && decimals == null) return '0';
 
-  var s = v.abs() >= 1e15 || v.abs() < 1e-9
-      ? v.toStringAsExponential(6)
-      : _toPrecision(v, decimals ?? 12);
+  // `decimals` is decimal places, not significant digits: money keeps cents
+  var s = decimals != null
+      ? v.toStringAsFixed(decimals)
+      : v.abs() >= 1e15 || v.abs() < 1e-9
+          ? v.toStringAsExponential(6)
+          : _toPrecision(v, 12);
 
   if (s.contains('e')) {
     s = s.replaceAll(RegExp(r'0+e'), 'e').replaceAll(RegExp(r'\.e'), 'e');
@@ -157,7 +160,7 @@ String formatValue(Value v, {int? decimals}) {
       if (unit == null) return n;
       return '$n ${_unitLabel(unit.id, value)}';
     case MoneyValue(:final value, :final currency):
-      final n = formatNumber(value.abs(), decimals: decimals);
+      final n = formatNumber(value.abs(), decimals: decimals ?? 2);
       final sym = currencySymbols[currency] ?? '$currency ';
       final sign = value < 0 ? '-' : '';
       return currency == 'JPY' || currency == 'KRW'
