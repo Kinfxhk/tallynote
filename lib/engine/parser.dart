@@ -365,8 +365,11 @@ class Parser {
         if (!_matchRparen()) throw ParseError('missing ) in $name()');
       }
     } else {
-      // prefix functions: "sqrt 16"
+      // prefix functions: "sqrt 16", "round 3.14159 2", "min 3 5 7"
       args.add(_unary());
+      while (cur?.type == TokType.number) {
+        args.add(_unary());
+      }
     }
     return CallNode(name, args);
   }

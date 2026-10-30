@@ -221,5 +221,6 @@ class DateParser {
     }
   }
 
-  static String? zoneFor(String token) => zones[token.toLowerCase().trim()];
+  static String? zoneFor(String token) => zones[
+      token.toLowerCase().replaceAll(RegExp(r'\s+'), '').trim()];
 }

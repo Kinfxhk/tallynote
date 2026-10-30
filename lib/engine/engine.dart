@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'dates.dart';
 import 'evaluator.dart';
 import 'parser.dart';
@@ -256,6 +258,21 @@ class SheetEngine {
       if (p != null && b != null && p != 0) return NumValue(b / (p / 100));
     }
 
+    // "compound interest 5000 at 7.5% for 3 years"
+    final ci = RegExp(
+            r'^(?:compound\s+interest|compounding)\s+([\d.,]+)\s*(?:at|@)\s*([\d.]+)\s*%\s+(?:for|over)\s+(.+)$',
+            caseSensitive: false)
+        .firstMatch(body);
+    if (ci != null) {
+      final principal = double.tryParse(ci.group(1)!.replaceAll(',', ''));
+      final rate = double.tryParse(ci.group(2)!);
+      final years = _years(ci.group(3)!);
+      if (principal != null && rate != null && years != null) {
+        return NumValue(
+            principal * math.pow(1 + rate / 100, years).toDouble());
+      }
+    }
+
     // "25% off 159.99"
     final off = RegExp(r'^([\d.]+)\s*%\s+off\s+(.*)$', caseSensitive: false)
         .firstMatch(body);
@@ -398,6 +415,21 @@ class SheetEngine {
   }
 
   double? _numOf(Value? v) => v is NumValue ? v.value : null;
+
+  double? _years(String s) {
+    final m = RegExp(r'([\d.]+)\s*(years?|months?|weeks?|days?)',
+            caseSensitive: false)
+        .firstMatch(s);
+    if (m == null) return double.tryParse(s.trim());
+    final n = double.tryParse(m.group(1)!);
+    if (n == null) return null;
+    return switch (m.group(2)!.toLowerCase()) {
+      'year' || 'years' => n,
+      'month' || 'months' => n / 12,
+      'week' || 'weeks' => n / 52,
+      _ => n / 365,
+    };
+  }
 
   bool? _compare(String expr, EvalContext ctx) {
     final m = RegExp(r'^(.*?)\s*(>=|<=|==|!=|>|<)\s*(.*)$').firstMatch(expr);

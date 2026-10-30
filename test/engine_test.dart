@@ -85,6 +85,17 @@ void main() {
     expect(one('hello 3+4'), '7');
   });
 
+  test('functions, money and timezone', () {
+    expect(one('round 3.14159 2'), '3.14');
+    expect(one('fact 5'), '120');
+    expect(one('sin 30 deg'), '0.5');
+    expect(one('days between 2026-01-01 and 2026-10-30'), '302 days');
+    expect(one('3pm HKT in New York'), endsWith('3:00 AM'));
+    expect(one('compound interest 5000 at 7.5% for 3 years'),
+        startsWith('6,211.48'));
+    expect(one('30 celsius in fahrenheit'), '86 °F');
+  });
+
   test('text lines stay quiet', () {
     expect(one('hello world'), isNull);
   });

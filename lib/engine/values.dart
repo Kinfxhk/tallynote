@@ -137,11 +137,25 @@ String _toPrecision(double v, int sig) {
   return s;
 }
 
+const _unitSymbols = {'C': '°C', 'F': '°F'};
+const _plurals = {
+  'day': 'days', 'week': 'weeks', 'month': 'months', 'year': 'years',
+};
+
+String _unitLabel(String id, double value) {
+  final symbol = _unitSymbols[id];
+  if (symbol != null) return symbol;
+  final plural = _plurals[id];
+  if (plural != null && value != 1) return plural;
+  return id;
+}
+
 String formatValue(Value v, {int? decimals}) {
   switch (v) {
     case NumValue(:final value, :final unit):
       final n = formatNumber(value, decimals: decimals);
-      return unit == null ? n : '$n ${unit.id}';
+      if (unit == null) return n;
+      return '$n ${_unitLabel(unit.id, value)}';
     case MoneyValue(:final value, :final currency):
       final n = formatNumber(value.abs(), decimals: decimals);
       final sym = currencySymbols[currency] ?? '$currency ';
