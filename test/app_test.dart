@@ -347,6 +347,31 @@ void main() {
     expect(c.text, '**hello** world');
   });
 
+  testWidgets('the status bar shows the save state', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+
+    await tester.enterText(editor, '1+1');
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.textContaining('editing'), findsOneWidget);
+
+    // the 400ms debounce writes it
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.textContaining('saved '), findsOneWidget);
+
+    // Ctrl+S confirms straight away
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.text('Saved ✓'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2)); // let the flash expire
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

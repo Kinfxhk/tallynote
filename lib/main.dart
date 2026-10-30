@@ -51,7 +51,9 @@ class _AppState extends State<TallynoteApp> {
   /// Ctrl/Cmd held: the wheel zooms instead of scrolling.
   final ValueNotifier<bool> _zoomModifier = ValueNotifier(false);
   bool _zoomHud = false;
-  bool _savedHud = false;
+  bool _savedFlash = false;
+  DateTime? _lastSaved;
+  bool _dirty = false;
   final FocusNode _searchFocus = FocusNode();
   Timer? _zoomHudTimer;
 
@@ -198,6 +200,7 @@ class _AppState extends State<TallynoteApp> {
     if (_syncing) return;
     final id = _store.activeId;
     if (id == null) return;
+    if (!_dirty) setState(() => _dirty = true);
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), () {
       final firstLine = _controller.text
@@ -213,6 +216,12 @@ class _AppState extends State<TallynoteApp> {
             ? null
             : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
       );
+      if (mounted) {
+        setState(() {
+          _dirty = false;
+          _lastSaved = DateTime.now();
+        });
+      }
     });
   }
 
@@ -247,9 +256,13 @@ class _AppState extends State<TallynoteApp> {
             : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
       );
     }
-    setState(() => _savedHud = true);
-    Timer(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _savedHud = false);
+    setState(() {
+      _lastSaved = DateTime.now();
+      _dirty = false;
+      _savedFlash = true;
+    });
+    Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _savedFlash = false);
     });
   }
 
@@ -613,31 +626,6 @@ class _AppState extends State<TallynoteApp> {
                                     },
                                   ),
                                 ),
-                                if (_savedHud)
-                                  Positioned(
-                                    left: 18,
-                                    bottom: 18,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Palette.bg(_dark),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: Palette.hairline(_dark),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'Saved',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Palette.faint(_dark),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
                                 if (_zoomHud)
                                   Positioned(
                                     right: 18,
@@ -722,6 +710,9 @@ class _AppState extends State<TallynoteApp> {
                           ),
                           _StatusBar(
                             dark: _dark,
+                            dirty: _dirty,
+                            justSaved: _savedFlash,
+                            savedAt: _lastSaved,
                             lines: _controller.text.split('\n').length,
                             answers: _results
                                 .where((r) => r.display != null)
@@ -816,12 +807,33 @@ class _StatusBar extends StatelessWidget {
   final bool dark;
   final int lines;
   final int answers;
+  final bool dirty;
+  final bool justSaved;
+  final DateTime? savedAt;
 
   const _StatusBar({
     required this.dark,
     required this.lines,
     required this.answers,
+    required this.dirty,
+    required this.justSaved,
+    required this.savedAt,
   });
+
+  /// "editing…" while the debounce is pending, else the last save time.
+  String get _saveLabel {
+    if (dirty) return 'editing…';
+    if (justSaved) return 'Saved ✓';
+    final at = savedAt;
+    if (at == null) return '';
+    final hh = at.hour.toString().padLeft(2, '0');
+    final mm = at.minute.toString().padLeft(2, '0');
+    final sameDay =
+        at.year == DateTime.now().year &&
+        at.month == DateTime.now().month &&
+        at.day == DateTime.now().day;
+    return sameDay ? 'saved $hh:$mm' : 'saved ${at.day}/${at.month} $hh:$mm';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -843,6 +855,16 @@ class _StatusBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          if (_saveLabel.isNotEmpty) ...[
+            Text(
+              _saveLabel,
+              style: TextStyle(
+                fontSize: 11,
+                color: justSaved ? Palette.positive(dark) : Palette.faint(dark),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Flexible(
             child: Text(
               'rates $rateDate',
