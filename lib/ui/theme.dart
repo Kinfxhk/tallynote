@@ -53,6 +53,9 @@ ThemeData buildTheme(bool dark) {
         .textTheme
         .apply(bodyColor: fg, displayColor: fg),
     dividerColor: Palette.hairline(dark),
-    splashFactory: NoSplash.splashFactory,
+    splashFactory: InkSparkle.splashFactory,
+    splashColor: Palette.accent.withValues(alpha: 0.10),
+    highlightColor: Palette.accent.withValues(alpha: 0.06),
+    hoverColor: Palette.accent.withValues(alpha: 0.05),
   );
 }

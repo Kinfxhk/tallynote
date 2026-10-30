@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
+import 'feedback.dart';
 import 'theme.dart';
 
 /// A single text field with answers aligned to each logical line.
@@ -200,7 +201,10 @@ class _EditorViewState extends State<EditorView> {
     if (!canExplain) return IgnorePointer(child: child);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _openSteps(line),
+      onTap: () {
+        tapFeedback();
+        _openSteps(line);
+      },
       child: child,
     );
   }

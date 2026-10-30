@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/document.dart';
+import 'feedback.dart';
 import 'theme.dart';
 
 class Sidebar extends StatefulWidget {
@@ -152,7 +153,7 @@ class _SidebarState extends State<Sidebar> {
   Widget _folderRow(Folder f) {
     final open = !_collapsed.contains(f.id);
     final count = _store.inFolder(f.id).length;
-    return InkWell(
+    return Pressable(
       onTap: () => setState(() {
         if (open) {
           _collapsed.add(f.id);
@@ -194,7 +195,7 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Widget _unfiledRow(int count) {
-    return InkWell(
+    return Pressable(
       onTap: () => setState(() => _unfiledOpen = !_unfiledOpen),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -231,7 +232,7 @@ class _SidebarState extends State<Sidebar> {
   Widget _sheetTile(Sheet s, {bool showFolder = false}) {
     final selected = s.id == _store.activeId;
     final folder = showFolder ? _store.folderOf(s) : null;
-    return InkWell(
+    return Pressable(
       onTap: () {
         _store.select(s.id);
         if (MediaQuery.sizeOf(context).width < 720) {
@@ -291,7 +292,7 @@ class _SidebarState extends State<Sidebar> {
                 ],
               ),
             ),
-            InkWell(
+            Pressable(
               onTap: () => _sheetMenu(s),
               child: Padding(
                 padding: const EdgeInsets.all(5),
@@ -313,7 +314,7 @@ class _SidebarState extends State<Sidebar> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return Pressable(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -420,7 +421,7 @@ class _SidebarState extends State<Sidebar> {
     }
   }
 
-  Widget _menuRow(String label, VoidCallback onTap) => InkWell(
+  Widget _menuRow(String label, VoidCallback onTap) => Pressable(
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),

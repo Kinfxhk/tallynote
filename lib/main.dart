@@ -8,6 +8,7 @@ import 'data/document.dart';
 import 'data/rates.dart';
 import 'engine/engine.dart';
 import 'ui/editor_view.dart';
+import 'ui/feedback.dart';
 import 'ui/formatting.dart';
 import 'ui/marked_controller.dart';
 import 'ui/settings_sheet.dart';
@@ -386,7 +387,7 @@ class _FormatBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget btn(String label, TextStyle style, String open, String close) =>
-        InkWell(
+        Pressable(
           onTap: () => onFormat(open, close),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -419,7 +420,7 @@ class _FormatBar extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           for (final entry in Fmt.colours.entries)
-            InkWell(
+            Pressable(
               onTap: () => onFormat('{${entry.key}}', '{/}'),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
