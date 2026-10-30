@@ -8,6 +8,8 @@ import 'data/document.dart';
 import 'data/rates.dart';
 import 'engine/engine.dart';
 import 'ui/editor_view.dart';
+import 'ui/formatting.dart';
+import 'ui/marked_controller.dart';
 import 'ui/settings_sheet.dart';
 import 'ui/sidebar.dart';
 import 'ui/theme.dart';
@@ -26,7 +28,7 @@ class TallynoteApp extends StatefulWidget {
 
 class _AppState extends State<TallynoteApp> {
   final _store = DocumentStore();
-  final _controller = TextEditingController();
+  final _controller = MarkedController(dark: false);
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _navKey = GlobalKey<NavigatorState>();
 
@@ -102,7 +104,11 @@ class _AppState extends State<TallynoteApp> {
   }
 
   void _recalc() {
-    final lines = _controller.text.split('\n');
+    // markers are presentation only: the engine sees plain arithmetic
+    final lines = _controller.text
+        .split('\n')
+        .map(Fmt.stripMarkers)
+        .toList(growable: false);
     _results = _engine.evaluate(lines);
     if (mounted) setState(() {});
   }
@@ -125,8 +131,21 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.steps', _steps);
   }
 
+  bool get _hasSelection =>
+      _controller.selection.isValid && !_controller.selection.isCollapsed;
+
+  void _format(String open, String close) {
+    final sel = _controller.selection;
+    if (!_hasSelection) return;
+    final (text, selection) =
+        Fmt.wrap(_controller.text, sel, open, close);
+    _controller.value =
+        TextEditingValue(text: text, selection: selection);
+  }
+
   @override
   Widget build(BuildContext context) {
+    _controller.dark = _dark;
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final theme = buildTheme(_dark);
 
@@ -214,6 +233,11 @@ class _AppState extends State<TallynoteApp> {
                           ),
                         ),
                         Divider(height: 1, color: Palette.hairline(_dark)),
+                        if (_hasSelection)
+                          _FormatBar(
+                            dark: _dark,
+                            onFormat: _format,
+                          ),
                         Expanded(
                           child: EditorView(
                             controller: _controller,
@@ -338,6 +362,62 @@ class _StatusBar extends StatelessWidget {
           const Spacer(),
           Text('rates $rateDate',
               style: TextStyle(fontSize: 11, color: Palette.faint(dark))),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormatBar extends StatelessWidget {
+  final bool dark;
+  final void Function(String open, String close) onFormat;
+
+  const _FormatBar({required this.dark, required this.onFormat});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget btn(String label, TextStyle style, String open, String close) =>
+        InkWell(
+          onTap: () => onFormat(open, close),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            child: Text(label, style: style.copyWith(color: Palette.fg(dark))),
+          ),
+        );
+
+    final base = TextStyle(fontSize: 13, fontFamily: monoFamily);
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Palette.hairline(dark))),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          btn('B', base.copyWith(fontWeight: FontWeight.w700), '**', '**'),
+          btn('I', base.copyWith(fontStyle: FontStyle.italic), '_', '_'),
+          btn('S', base.copyWith(decoration: TextDecoration.lineThrough), '~~', '~~'),
+          btn('U', base.copyWith(decoration: TextDecoration.underline), '__', '__'),
+          const SizedBox(width: 6),
+          for (final entry in Fmt.colours.entries)
+            InkWell(
+              onTap: () => onFormat('{${entry.key}}', '{/}'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 9),
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: entry.value,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          const Spacer(),
+          Text('selection',
+              style: TextStyle(fontSize: 10, color: Palette.faint(dark))),
+          const SizedBox(width: 10),
         ],
       ),
     );
