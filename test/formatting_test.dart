@@ -38,6 +38,35 @@ void main() {
       expect(newSel.textInside(out), '2000');
     });
 
+    test('a line name is painted as a chip', () {
+      final spans = Fmt.withReferences(
+        [const TextSpan(text: 'lucid * 2', style: TextStyle())],
+        const TextStyle(),
+        labels: {'lucid'},
+        dark: false,
+      );
+      final chip = spans.whereType<TextSpan>().firstWhere(
+        (s) => s.text == 'lucid',
+      );
+      expect(chip.style?.backgroundColor, isNotNull);
+      expect(chip.style?.fontWeight, FontWeight.w600);
+      // non-reference words keep their own style
+      expect(spans.whereType<TextSpan>().any((s) => s.text == ' * 2'), isTrue);
+    });
+
+    test('line N is a chip even without labels', () {
+      final spans = Fmt.withReferences(
+        [const TextSpan(text: 'line 3 * 2', style: TextStyle())],
+        const TextStyle(),
+        labels: {'anything'},
+        dark: true,
+      );
+      expect(
+        spans.whereType<TextSpan>().any((s) => s.text == 'line 3'),
+        isTrue,
+      );
+    });
+
     test('a // line is a draft', () {
       expect(Fmt.isDraft('// 想法：下個月加價'), isTrue);
       expect(Fmt.isDraft('  // indented'), isTrue);

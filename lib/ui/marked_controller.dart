@@ -7,6 +7,9 @@ import 'theme.dart';
 /// {red}colour{/}) without turning the sheet into a rich-text document.
 class MarkedController extends TextEditingController {
   bool dark;
+
+  /// Words that name an earlier line; they are drawn as reference chips.
+  Set<String> labels = const {};
   MarkedController({super.text, required this.dark});
 
   @override
@@ -32,7 +35,14 @@ class MarkedController extends TextEditingController {
           ),
         );
       } else {
-        children.addAll(Fmt.spans(line, base));
+        children.addAll(
+          Fmt.withReferences(
+            Fmt.spans(line, base),
+            base,
+            labels: labels,
+            dark: dark,
+          ),
+        );
       }
       if (i < lines.length - 1) children.add(TextSpan(text: '\n', style: base));
     }

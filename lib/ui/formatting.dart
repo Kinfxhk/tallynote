@@ -138,6 +138,57 @@ class Fmt {
     );
   }
 
+  /// Paints `line 3` and line names ("lucid", "午餐") as chips: a tinted
+  /// background plus the answer colour, so a reference never reads as prose.
+  static List<InlineSpan> withReferences(
+    List<TextSpan> spans,
+    TextStyle base, {
+    required Set<String> labels,
+    required bool dark,
+  }) {
+    if (labels.isEmpty) return spans;
+    final pattern = RegExp(
+      r'line\s+\d+|[A-Za-z_][A-Za-z0-9_]*|[\u4e00-\u9fff]+',
+    );
+    final out = <InlineSpan>[];
+
+    for (final span in spans) {
+      final text = span.text;
+      if (text == null || text.isEmpty) {
+        out.add(span);
+        continue;
+      }
+      var last = 0;
+      for (final m in pattern.allMatches(text)) {
+        final word = m.group(0)!;
+        final isRef =
+            word.startsWith('line ') || labels.contains(word.toLowerCase());
+        if (!isRef) continue;
+        if (m.start > last) {
+          out.add(
+            TextSpan(text: text.substring(last, m.start), style: span.style),
+          );
+        }
+        final tint = dark ? const Color(0xFFE8B75A) : const Color(0xFFA8442B);
+        out.add(
+          TextSpan(
+            text: word,
+            style: (span.style ?? base).copyWith(
+              color: tint,
+              fontWeight: FontWeight.w600,
+              backgroundColor: tint.withValues(alpha: 0.14),
+            ),
+          ),
+        );
+        last = m.end;
+      }
+      if (last < text.length) {
+        out.add(TextSpan(text: text.substring(last), style: span.style));
+      }
+    }
+    return out;
+  }
+
   /// Every line that starts with `//` is a draft: nothing is calculated.
   static bool isDraft(String line) => line.trimLeft().startsWith('//');
 }

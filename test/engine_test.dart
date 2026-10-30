@@ -65,10 +65,7 @@ void main() {
   });
 
   test('a line is named by its first word', () {
-    final r = engine.evaluate([
-      r'Tradeify: $5,038.50',
-      'tradeify * 2',
-    ]);
+    final r = engine.evaluate([r'Tradeify: $5,038.50', 'tradeify * 2']);
     expect(r[1].display, r'$10,077.00');
 
     final zh = engine.evaluate(['午餐 120', '午餐 * 3']);

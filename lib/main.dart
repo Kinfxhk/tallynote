@@ -172,6 +172,11 @@ class _AppState extends State<TallynoteApp> {
   @override
   Widget build(BuildContext context) {
     _controller.dark = _dark;
+    _controller.labels = {
+      for (final r in _results)
+        if (r.display != null && SheetEngine.labelOf(r.text) != null)
+          SheetEngine.labelOf(r.text)!,
+    };
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final theme = buildTheme(_dark);
 
@@ -280,8 +285,6 @@ class _AppState extends State<TallynoteApp> {
                           ),
                         ),
                         Divider(height: 1, color: Palette.hairline(_dark)),
-                        if (_hasSelection)
-                          _FormatBar(dark: _dark, onFormat: _format),
                         Expanded(
                           child: Stack(
                             children: [
@@ -308,6 +311,18 @@ class _AppState extends State<TallynoteApp> {
                                   },
                                 ),
                               ),
+                              if (_hasSelection)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 14,
+                                  child: Center(
+                                    child: _FormatBar(
+                                      dark: _dark,
+                                      onFormat: _format,
+                                    ),
+                                  ),
+                                ),
                               if (_answersVisible)
                                 Positioned(
                                   top: 0,
@@ -514,10 +529,20 @@ class _FormatBar extends StatelessWidget {
         );
 
     final base = TextStyle(fontSize: 13, fontFamily: monoFamily);
+    // a floating card: showing it must not reflow the text above
     return Container(
-      height: 34,
+      constraints: const BoxConstraints(maxWidth: 360),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Palette.hairline(dark))),
+        color: Palette.bg(dark),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Palette.hairline(dark)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+        ],
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,

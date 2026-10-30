@@ -7,13 +7,12 @@ import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
 /// Answers are Text widgets; the editor's EditableText is not one.
-Finder answerText(String needle) => find.byWidgetPredicate(
-      (w) => w is Text && (w.data ?? '').contains(needle),
-    );
+Finder answerText(String needle) =>
+    find.byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(needle));
 
 Finder answerExact(String value) => find.byWidgetPredicate(
-      (w) => w is Text && (w.data ?? '').replaceAll('\u00A0', ' ').trim() == value,
-    );
+  (w) => w is Text && (w.data ?? '').replaceAll('\u00A0', ' ').trim() == value,
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -90,8 +89,9 @@ void main() {
     expect(find.textContaining('1 + 2 = 3'), findsOneWidget);
   });
 
-  testWidgets('answers share one right edge and width (decimal grid)',
-      (tester) async {
+  testWidgets('answers share one right edge and width (decimal grid)', (
+    tester,
+  ) async {
     await boot(tester);
     final editor = find.descendant(
       of: find.byType(EditorView),
@@ -120,10 +120,14 @@ void main() {
     await tester.enterText(editor, '5-10\n2+3');
     await tester.pump(const Duration(milliseconds: 60));
 
-    expect(tester.widget<Text>(answerExact('-5')).style?.color,
-        Palette.negative(false));
-    expect(tester.widget<Text>(answerExact('5')).style?.color,
-        Palette.positive(false));
+    expect(
+      tester.widget<Text>(answerExact('-5')).style?.color,
+      Palette.negative(false),
+    );
+    expect(
+      tester.widget<Text>(answerExact('5')).style?.color,
+      Palette.positive(false),
+    );
   });
 
   testWidgets(
@@ -165,7 +169,12 @@ void main() {
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    await tester.enterText(editor, r'$4,036.29' '\n' r'$1,251.90');
+    await tester.enterText(
+      editor,
+      r'$4,036.29'
+      '\n'
+      r'$1,251.90',
+    );
     await tester.pump(const Duration(milliseconds: 80));
 
     // cents are part of the answer text, never a separate fragment

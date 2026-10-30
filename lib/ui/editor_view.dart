@@ -457,7 +457,8 @@ class _AnswerCell extends StatelessWidget {
   Widget build(BuildContext context) {
     const nbsp = '\u00A0';
     final dot = display.lastIndexOf('.');
-    final hasFrac = dot > 0 &&
+    final hasFrac =
+        dot > 0 &&
         display.length - dot - 1 <= metrics.maxFrac &&
         RegExp(r'^\d+$').hasMatch(display.substring(dot + 1));
     final isInteger = dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
@@ -468,7 +469,8 @@ class _AnswerCell extends StatelessWidget {
       final frac = display.substring(dot + 1).padRight(metrics.maxFrac, nbsp);
       text = '$head.$frac';
     } else if (isInteger) {
-      text = display.padLeft(metrics.maxHead, nbsp) +
+      text =
+          display.padLeft(metrics.maxHead, nbsp) +
           nbsp * (metrics.maxFrac == 0 ? 0 : 1 + metrics.maxFrac);
     }
 
