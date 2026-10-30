@@ -244,8 +244,10 @@ class _SettingsDialogState extends State<_SettingsDialog> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
         child: Text(
-          'Shortcuts: ⌘/Ctrl + = − 0 zoom · ⌘\\ sidebar · ⌘⇧A answers · '
-          '⌘N new sheet · ⌘, settings · double-click the divider to fit',
+          'Shortcuts — ⌘/Ctrl: S save · ⇧S strike · ⇧D save a copy · '
+          'B bold · I italic · U underline · F search · W close tab · '
+          r'N new sheet · \ sidebar · ⇧A answers · + − 0 zoom · '
+          'double-click the divider to fit',
           style: TextStyle(
             fontSize: 11,
             height: 1.5,

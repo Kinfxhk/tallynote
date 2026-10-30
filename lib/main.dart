@@ -51,6 +51,8 @@ class _AppState extends State<TallynoteApp> {
   /// Ctrl/Cmd held: the wheel zooms instead of scrolling.
   final ValueNotifier<bool> _zoomModifier = ValueNotifier(false);
   bool _zoomHud = false;
+  bool _savedHud = false;
+  final FocusNode _searchFocus = FocusNode();
   Timer? _zoomHudTimer;
 
   bool _onKey(KeyEvent e) {
@@ -223,6 +225,38 @@ class _AppState extends State<TallynoteApp> {
     );
   }
 
+  /// Ctrl/Cmd+S: write now instead of waiting for the debounce.
+  void _saveNow() {
+    _saveTimer?.cancel();
+    final id = _store.activeId;
+    if (id != null) {
+      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
+      final firstLine = _controller.text
+          .split('\n')
+          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
+          .replaceAll(RegExp(r'^#\s*'), '')
+          .trim();
+      _store.update(
+        id,
+        content: _controller.text,
+        title: sheet?.customTitle == true
+            ? null
+            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
+      );
+    }
+    setState(() => _savedHud = true);
+    Timer(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _savedHud = false);
+    });
+  }
+
+  void _focusSearch() {
+    if (!_sidebarOpen) setState(() => _sidebarOpen = true);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _searchFocus.requestFocus(),
+    );
+  }
+
   void _recalc() {
     // markers are presentation only: the engine sees plain arithmetic
     final lines = _controller.text
@@ -289,6 +323,7 @@ class _AppState extends State<TallynoteApp> {
       store: _store,
       dark: _dark,
       wheelBlocked: _zoomModifier,
+      searchFocus: _searchFocus,
       onClose: wide ? _toggleSidebar : () => Navigator.of(context).maybePop(),
     );
 
@@ -354,6 +389,62 @@ class _AppState extends State<TallynoteApp> {
           const SingleActivator(LogicalKeyboardKey.digit0, control: true): () {
             setState(() => _uiScale = 1.0);
             _saveSettings();
+          },
+          const SingleActivator(LogicalKeyboardKey.keyS, meta: true): _saveNow,
+          const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+              _saveNow,
+          const SingleActivator(
+            LogicalKeyboardKey.keyD,
+            meta: true,
+            shift: true,
+          ): () {
+            final id = _store.activeId;
+            if (id != null) _store.duplicate(id);
+          },
+          const SingleActivator(
+            LogicalKeyboardKey.keyD,
+            control: true,
+            shift: true,
+          ): () {
+            final id = _store.activeId;
+            if (id != null) _store.duplicate(id);
+          },
+          // rich-text shortcuts, the same keys as Word / Google Docs
+          const SingleActivator(LogicalKeyboardKey.keyB, meta: true): () =>
+              _format('**', '**'),
+          const SingleActivator(LogicalKeyboardKey.keyB, control: true): () =>
+              _format('**', '**'),
+          const SingleActivator(LogicalKeyboardKey.keyI, meta: true): () =>
+              _format('_', '_'),
+          const SingleActivator(LogicalKeyboardKey.keyI, control: true): () =>
+              _format('_', '_'),
+          const SingleActivator(LogicalKeyboardKey.keyU, meta: true): () =>
+              _format('__', '__'),
+          const SingleActivator(LogicalKeyboardKey.keyU, control: true): () =>
+              _format('__', '__'),
+          const SingleActivator(
+            LogicalKeyboardKey.keyS,
+            meta: true,
+            shift: true,
+          ): () =>
+              _format('~~', '~~'),
+          const SingleActivator(
+            LogicalKeyboardKey.keyS,
+            control: true,
+            shift: true,
+          ): () =>
+              _format('~~', '~~'),
+          const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+              _focusSearch,
+          const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+              _focusSearch,
+          const SingleActivator(LogicalKeyboardKey.keyW, meta: true): () {
+            final id = _store.activeId;
+            if (id != null) _closeTab(id);
+          },
+          const SingleActivator(LogicalKeyboardKey.keyW, control: true): () {
+            final id = _store.activeId;
+            if (id != null) _closeTab(id);
           },
           const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () =>
               _store.create(),
@@ -519,6 +610,31 @@ class _AppState extends State<TallynoteApp> {
                                     },
                                   ),
                                 ),
+                                if (_savedHud)
+                                  Positioned(
+                                    left: 18,
+                                    bottom: 18,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Palette.bg(_dark),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: Palette.hairline(_dark),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Saved',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Palette.faint(_dark),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 if (_zoomHud)
                                   Positioned(
                                     right: 18,

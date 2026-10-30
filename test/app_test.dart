@@ -326,6 +326,27 @@ void main() {
     expect(tester.getSize(find.byType(Scaffold)).width, closeTo(800, 0.5));
   });
 
+  testWidgets('Ctrl+B bolds the selection', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editor, 'hello world');
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final c = tester.widget<TextField>(editor).controller!;
+    c.selection = const TextSelection(baseOffset: 0, extentOffset: 5);
+    await tester.pump();
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(c.text, '**hello** world');
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

@@ -10,6 +10,7 @@ class Sidebar extends StatefulWidget {
   final bool dark;
   final VoidCallback onClose;
   final ValueListenable<bool>? wheelBlocked;
+  final FocusNode? searchFocus;
 
   const Sidebar({
     super.key,
@@ -17,6 +18,7 @@ class Sidebar extends StatefulWidget {
     required this.dark,
     required this.onClose,
     this.wheelBlocked,
+    this.searchFocus,
   });
 
   @override
@@ -80,6 +82,7 @@ class _SidebarState extends State<Sidebar> {
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
             child: TextField(
               controller: _search,
+              focusNode: widget.searchFocus,
               onChanged: (v) => setState(() => _query = v),
               style: TextStyle(fontSize: 12.5, color: Palette.fg(_dark)),
               cursorColor: Palette.answer(_dark),

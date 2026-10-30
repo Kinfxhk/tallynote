@@ -185,6 +185,23 @@ class DocumentStore extends ChangeNotifier {
     return s;
   }
 
+  /// Save a copy: same content, new id, "(copy)" suffix.
+  Sheet duplicate(String id) {
+    final src = sheets.where((e) => e.id == id).firstOrNull;
+    final copy = Sheet(
+      id: _newId(),
+      title: src == null ? 'Untitled copy' : '${src.title} (copy)',
+      content: src?.content ?? '',
+      folderId: src?.folderId,
+      customTitle: true,
+    );
+    sheets.insert(0, copy);
+    activeId = copy.id;
+    notifyListeners();
+    _persist();
+    return copy;
+  }
+
   void delete(String id) {
     sheets.removeWhere((s) => s.id == id);
     if (sheets.isEmpty) {
