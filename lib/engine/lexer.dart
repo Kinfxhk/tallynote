@@ -131,7 +131,13 @@ class Lexer {
       }
       if (c == '(') {
         final prev = out.isEmpty ? null : out.last;
-        _parenIsCall.add(prev != null && prev.type == TokType.word);
+        // `min(` is a call. `x (` and `times (` are operators, so the paren
+        // only groups and an EU comma stays a decimal.
+        _parenIsCall.add(
+          prev != null &&
+              prev.type == TokType.word &&
+              _funcNames.contains(prev.text.toLowerCase()),
+        );
         out.add(Token(TokType.lparen, '(', _i++));
         continue;
       }

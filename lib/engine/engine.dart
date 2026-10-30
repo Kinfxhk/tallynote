@@ -921,13 +921,23 @@ class SheetEngine {
   /// exactly three digits (`1,23` in US, `1.23` in EU) is not rewritten into
   /// a different integer.
   Value? _loneNumber(String s) {
-    final numbers = Lexer(
-      s,
-      format: format,
-    ).tokenize().where((t) => t.type == TokType.number).toList();
-    if (numbers.length != 1) return null;
-    final v = numbers.single.num;
+    final tokens = Lexer(s, format: format).tokenize();
+    final at = <int>[];
+    for (var i = 0; i < tokens.length; i++) {
+      if (tokens[i].type == TokType.number) at.add(i);
+    }
+    if (at.length != 1) return null;
+    final i = at.single;
+    final v = tokens[i].num;
     if (v == null) return null;
+    // The lexer keeps the sign as its own token. A minus glued to the only
+    // number, at the start or after `(`, is unary.
+    if (i > 0 &&
+        tokens[i - 1].type == TokType.op &&
+        tokens[i - 1].text == '-') {
+      final opener = i == 1 || tokens[i - 2].type == TokType.lparen;
+      if (opener) return NumValue(-v);
+    }
     return NumValue(v);
   }
 }
