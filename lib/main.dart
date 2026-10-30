@@ -50,6 +50,8 @@ class _AppState extends State<TallynoteApp> {
 
   /// Ctrl/Cmd held: the wheel zooms instead of scrolling.
   final ValueNotifier<bool> _zoomModifier = ValueNotifier(false);
+  bool _zoomHud = false;
+  Timer? _zoomHudTimer;
 
   bool _onKey(KeyEvent e) {
     final down =
@@ -126,8 +128,17 @@ class _AppState extends State<TallynoteApp> {
     setState(() {});
   }
 
-  void _zoom(double factor) {
-    setState(() => _uiScale = (_uiScale * factor).clamp(0.75, 2.5));
+  void _zoom(double factor) => _setScale((_uiScale * factor).clamp(0.75, 2.5));
+
+  void _setScale(double v) {
+    setState(() {
+      _uiScale = v.clamp(0.75, 2.5);
+      _zoomHud = true;
+    });
+    _zoomHudTimer?.cancel();
+    _zoomHudTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (mounted) setState(() => _zoomHud = false);
+    });
     _saveSettings();
   }
 
@@ -298,6 +309,7 @@ class _AppState extends State<TallynoteApp> {
           ),
           child: ClipRect(
             child: Transform.scale(
+              key: const ValueKey('ui-zoom'),
               scale: s,
               alignment: Alignment.topLeft,
               child: SizedBox(
@@ -493,6 +505,18 @@ class _AppState extends State<TallynoteApp> {
                                     },
                                   ),
                                 ),
+                                if (_zoomHud)
+                                  Positioned(
+                                    right: 18,
+                                    bottom: 18,
+                                    child: _ZoomHud(
+                                      dark: _dark,
+                                      scale: _uiScale,
+                                      onMinus: () => _zoom(1 / 1.1),
+                                      onPlus: () => _zoom(1.1),
+                                      onReset: () => _setScale(1.0),
+                                    ),
+                                  ),
                                 if (_hasSelection)
                                   Positioned(
                                     left: 0,
@@ -837,6 +861,74 @@ class _TabBar extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ZoomHud extends StatelessWidget {
+  final bool dark;
+  final double scale;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+  final VoidCallback onReset;
+
+  const _ZoomHud({
+    required this.dark,
+    required this.scale,
+    required this.onMinus,
+    required this.onPlus,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget button(IconData icon, String tip, VoidCallback tap) => Pressable(
+      onTap: tap,
+      padding: const EdgeInsets.all(7),
+      child: Tooltip(
+        message: tip,
+        child: Icon(icon, size: 15, color: Palette.fg(dark)),
+      ),
+    );
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: Palette.bg(dark),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Palette.hairline(dark)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 12,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            button(Icons.remove, 'Zoom out  ⌘−', onMinus),
+            SizedBox(
+              width: 46,
+              child: Text(
+                '${(scale * 100).round()}%',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFeatures: const [],
+                  color: Palette.fg(dark),
+                ),
+              ),
+            ),
+            button(Icons.add, 'Zoom in  ⌘=', onPlus),
+            Container(width: 1, height: 16, color: Palette.hairline(dark)),
+            button(Icons.restart_alt, 'Reset to 100%  ⌘0', onReset),
+          ],
+        ),
       ),
     );
   }

@@ -259,20 +259,30 @@ void main() {
       of: find.byType(EditorView),
       matching: find.byType(TextField),
     );
-    /// The zoom wrapper is a uniform scale away from 1.0.
     double? zoomTransform() {
-      for (final w in tester.widgetList<Transform>(find.byType(Transform))) {
-        final m = w.transform.storage;
-        if ((m[0] - m[5]).abs() < 1e-6 && (m[0] - 1).abs() > 0.01) {
-          return m[0];
-        }
-      }
-      return null;
+      final f = find.byKey(const ValueKey('ui-zoom'));
+      if (f.evaluate().isEmpty) return null;
+      return tester.widget<Transform>(f).transform.storage[0];
     }
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
 
+    GestureBinding.instance.handlePointerEvent(PointerScrollEvent(
+      position: tester.getCenter(editor),
+      scrollDelta: const Offset(0, -120),
+    ));
+    await tester.pumpAndSettle();
+
+    // a HUD shows the percentage
+    expect(find.textContaining('%'), findsWidgets);
+
+    // Ctrl+0 resets to 100%
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+    await tester.pumpAndSettle();
+    expect(zoomTransform(), isNull, reason: 'reset returns to 100%');
+
+    // zoom again so the transform can be asserted
     GestureBinding.instance.handlePointerEvent(PointerScrollEvent(
       position: tester.getCenter(editor),
       scrollDelta: const Offset(0, -120),
@@ -288,6 +298,8 @@ void main() {
 
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pump();
+    // let the zoom HUD's hide timer expire
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {
