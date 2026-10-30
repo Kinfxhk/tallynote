@@ -21,6 +21,7 @@ class EditorView extends StatefulWidget {
   final double answerWidth;
   final ValueChanged<double>? onAnswerWidth;
   final bool signColours;
+  final void Function(int line)? onInsertReference;
   final Color? positiveColour;
   final Color? negativeColour;
 
@@ -35,6 +36,7 @@ class EditorView extends StatefulWidget {
     this.answerWidth = 212,
     this.onAnswerWidth,
     this.signColours = true,
+    this.onInsertReference,
     this.positiveColour,
     this.negativeColour,
   });
@@ -74,99 +76,110 @@ class _EditorViewState extends State<EditorView> {
   Widget build(BuildContext context) {
     final style = editorStyle(widget.dark);
     const stepGutter = 30.0; // finger-sized, but the icon stays small
+    const gutterW = 38.0; // faint line numbers, Notepad++ style
     final answerW = widget.answersVisible ? widget.answerWidth : 0.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final text = widget.controller.text;
-        final textWidth = constraints.maxWidth - answerW - 48;
+        final textWidth = constraints.maxWidth - answerW - gutterW - 48;
         final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
         final metrics = _columnMetrics(
           widget.results,
           available: answerW - stepGutter - 10,
         );
 
-        return SingleChildScrollView(
-          controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(right: answerW),
-                child: TextField(
-                  controller: widget.controller,
-                  maxLines: null,
-                  style: style,
-                  strutStyle: StrutStyle(
-                    fontFamily: monoFamily,
-                    fontSize: 15,
-                    height: 28 / 15,
-                    forceStrutHeight: true,
-                  ),
-                  cursorColor: Palette.answer(widget.dark),
-                  cursorWidth: 1.6,
-                  decoration: const InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    hintText: 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
-                  ),
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.none,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                ),
-              ),
-              if (widget.answersVisible)
+        return DragTarget<int>(
+          onAcceptWithDetails: (d) => widget.onInsertReference?.call(d.data),
+          builder: (context, candidate, rejected) => SingleChildScrollView(
+            controller: _scroll,
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
+            child: Stack(
+              children: [
+                // faint line numbers, aligned with the same text metrics
                 for (var i = 0; i < widget.results.length; i++)
-                  if (widget.results[i].display != null)
-                    Positioned(
-                      top: (tops.length > i ? tops[i] : 0),
-                      right: 0,
-                      width: answerW,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // the step marker lives in its own gutter so numbers
-                          // never move because of it
-                          SizedBox(
-                            width: stepGutter,
-                            height: 28,
-                            child:
-                                (widget.showSteps &&
-                                    widget.explain != null &&
-                                    _hasOperators(widget.results[i].text))
-                                ? _StepButton(
-                                    dark: widget.dark,
-                                    onTap: () =>
-                                        _openSteps(widget.results[i].text),
-                                  )
-                                : null,
-                          ),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: _tapForSteps(
-                                line: widget.results[i].text,
-                                canExplain:
-                                    widget.showSteps &&
-                                    widget.explain != null &&
-                                    _hasOperators(widget.results[i].text),
-                                child: _AnswerCell(
-                                  display: widget.results[i].display!,
-                                  style: answerStyle(widget.dark).copyWith(
-                                    color: _answerColour(widget.results[i]),
-                                  ),
-                                  metrics: metrics,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                  Positioned(
+                    top: (tops.length > i ? tops[i] : 0) + 6,
+                    left: 0,
+                    width: gutterW - 10,
+                    child: IgnorePointer(
+                      child: Text(
+                        '${i + 1}',
+                        key: ValueKey('gutter-${i + 1}'),
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontFamily: monoFamily,
+                          fontSize: 11,
+                          color: Palette.faint(widget.dark)
+                              .withValues(alpha: 0.55),
+                        ),
                       ),
                     ),
-            ],
+                  ),
+                Padding(
+                  padding: EdgeInsets.only(left: gutterW, right: answerW),
+                  child: TextField(
+                    controller: widget.controller,
+                    maxLines: null,
+                    style: style,
+                    strutStyle: StrutStyle(
+                      fontFamily: monoFamily,
+                      fontSize: 15,
+                      height: 28 / 15,
+                      forceStrutHeight: true,
+                    ),
+                    cursorColor: Palette.answer(widget.dark),
+                    cursorWidth: 1.6,
+                    decoration: const InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Type a calculation…   e.g.  rent = 2500  ·  total of #food',
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.none,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                  ),
+                ),
+                if (widget.answersVisible)
+                  for (var i = 0; i < widget.results.length; i++)
+                    if (widget.results[i].display != null)
+                      Positioned(
+                        top: (tops.length > i ? tops[i] : 0),
+                        right: 0,
+                        width: answerW,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // the step marker lives in its own gutter so numbers
+                            // never move because of it
+                            SizedBox(
+                              width: stepGutter,
+                              height: 28,
+                              child:
+                                  (widget.showSteps &&
+                                      widget.explain != null &&
+                                      _hasOperators(widget.results[i].text))
+                                  ? _StepButton(
+                                      dark: widget.dark,
+                                      onTap: () =>
+                                          _openSteps(widget.results[i].text),
+                                    )
+                                  : null,
+                            ),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: _cell(i, metrics),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ],
+            ),
           ),
         );
       },
@@ -215,6 +228,55 @@ class _EditorViewState extends State<EditorView> {
   static bool _hasOperators(String line) =>
       RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
 
+  /// One answer cell, with drag-to-reference when the sheet supports it.
+  Widget _cell(int i, _ColumnMetrics metrics) {
+    final r = widget.results[i];
+    final style = answerStyle(widget.dark).copyWith(color: _answerColour(r));
+    final cell = _tapForSteps(
+      line: r.text,
+      canExplain:
+          widget.showSteps && widget.explain != null && _hasOperators(r.text),
+      child: _AnswerCell(display: r.display!, style: style, metrics: metrics),
+    );
+
+    if (widget.onInsertReference == null) return cell;
+    // Draggable (not LongPress) keeps a plain tap free for the steps dialog
+    return Draggable<int>(
+      data: i + 1,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: _dragChip(i + 1, r.display!),
+      childWhenDragging: Opacity(opacity: 0.35, child: cell),
+      child: cell,
+    );
+  }
+
+  Widget _dragChip(int line, String value) => Material(
+    color: Colors.transparent,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Palette.bg(widget.dark),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Palette.answer(widget.dark)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        'line $line  ·  $value',
+        style: TextStyle(
+          fontFamily: monoFamily,
+          fontSize: 13,
+          color: Palette.fg(widget.dark),
+        ),
+      ),
+    ),
+  );
+
   /// Negative in red, positive in green — both overridable in Settings.
   Color? _answerColour(LineResult r) {
     if (r.error != null) {
@@ -241,7 +303,12 @@ class _EditorViewState extends State<EditorView> {
     required bool canExplain,
     required Widget child,
   }) {
-    if (!canExplain) return IgnorePointer(child: child);
+    // when dragging is available the cell must stay hit-testable
+    if (!canExplain) {
+      return widget.onInsertReference == null
+          ? IgnorePointer(child: child)
+          : child;
+    }
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {

@@ -125,6 +125,37 @@ void main() {
     expect(colourOf('5'), Palette.positive(false));
   });
 
+  testWidgets('line numbers show and a dragged answer becomes a live reference',
+      (tester) async {
+    await boot(tester);
+    final editorFinder = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editorFinder, '2000+3000');
+    await tester.pump(const Duration(milliseconds: 60));
+
+    // gutter
+    expect(find.byKey(const ValueKey('gutter-1')), findsOneWidget);
+
+    // drag the answer onto the editor
+    final answer = find.textContaining('5,000').first;
+    await tester.drag(answer, Offset.zero); // no-op sanity
+    final g = await tester.startGesture(tester.getCenter(answer));
+    await tester.pump(const Duration(milliseconds: 50));
+    await g.moveBy(const Offset(-40, 20));
+    await tester.pump();
+    await g.moveTo(tester.getCenter(editorFinder));
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(editorFinder);
+    expect(field.controller!.text, contains('line 1'));
+    // the reference evaluates to the same number (answers + any drag chip)
+    expect(find.textContaining('5,000'), findsAtLeastNWidgets(2));
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(

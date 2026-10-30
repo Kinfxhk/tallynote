@@ -115,6 +115,18 @@ class _AppState extends State<TallynoteApp> {
     });
   }
 
+  /// Dropping an answer appends a live reference; the engine keeps it fresh.
+  void _insertReference(int line) {
+    final base = _controller.text;
+    final sep = base.isEmpty || base.endsWith('\n') ? '' : '\n';
+    final ref = 'line $line';
+    final text = '$base$sep$ref';
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   void _recalc() {
     // markers are presentation only: the engine sees plain arithmetic
     final lines = _controller.text
@@ -282,6 +294,7 @@ class _AppState extends State<TallynoteApp> {
                                   showSteps: _steps,
                                   explain: _engine.explain,
                                   answerWidth: _answerW,
+                                  onInsertReference: _insertReference,
                                   signColours: _signColours,
                                   positiveColour: _posName.isEmpty
                                       ? null
