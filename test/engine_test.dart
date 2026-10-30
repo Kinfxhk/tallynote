@@ -74,6 +74,17 @@ void main() {
     expect(r[3].display, '400');
   });
 
+  test('x as multiplication and trailing words', () {
+    expect(one('4300 x 30%'), '1,290');
+    expect(one('4300 X 30% consistency'), '1,290');
+    expect(one(r'$500 x 3'), r'$1,500');
+  });
+
+  test('reads past leading prose', () {
+    expect(one('買嘢 4300 * 30%'), '1,290');
+    expect(one('hello 3+4'), '7');
+  });
+
   test('text lines stay quiet', () {
     expect(one('hello world'), isNull);
   });

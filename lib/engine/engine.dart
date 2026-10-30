@@ -362,13 +362,28 @@ class SheetEngine {
       return v == null ? m.group(0)! : _literal(v);
     });
 
-    try {
-      final node = Parser.parseExpression(expanded, units);
-      return Evaluator(ctx).eval(node);
-    } on UnresolvedWord {
-      rethrow;
-    } catch (_) {
-      rethrow;
+    // Soulver's "read past" behaviour: if the line starts with prose, retry
+    // the expression starting at each later word boundary. "買嘢 4300 x 30%"
+    // still answers.
+    Object? lastError;
+    for (final candidate in _candidates(expanded).take(8)) {
+      try {
+        final node = Parser.parseExpression(candidate, units);
+        return Evaluator(ctx).eval(node);
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    throw lastError ?? ParseError('empty');
+  }
+
+  Iterable<String> _candidates(String src) sync* {
+    yield src;
+    for (var i = 1; i < src.length; i++) {
+      // only start at the beginning of a word
+      if (src[i - 1] != ' ') continue;
+      if (src[i] == ' ') continue;
+      yield src.substring(i);
     }
   }
 

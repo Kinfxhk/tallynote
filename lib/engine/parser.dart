@@ -115,6 +115,11 @@ class Parser {
     return false;
   }
 
+  bool _isWordToken(String s) {
+    final c = cur;
+    return c != null && c.type == TokType.word && c.text.toLowerCase() == s;
+  }
+
   bool _matchRparen() {
     if (cur?.type == TokType.rparen) {
       _p++;
@@ -157,6 +162,10 @@ class Parser {
     var left = _unary();
     while (true) {
       if (_matchOp('*') || _matchOp('×') || _matchWords(['times'])) {
+        left = BinNode('*', left, _unary());
+      } else if (_isWordToken('x')) {
+        // "x" is how people type × on a keyboard
+        _p++;
         left = BinNode('*', left, _unary());
       } else if (_matchWords(['multiplied', 'by'])) {
         left = BinNode('*', left, _unary());
@@ -236,7 +245,7 @@ class Parser {
   }
 
   static const _reserved = {
-    'in', 'to', 'as', 'of', 'off', 'per', 'plus', 'minus', 'times',
+    'in', 'to', 'as', 'of', 'off', 'per', 'plus', 'minus', 'times', 'x',
     'multiplied', 'divided', 'over', 'into', 'and', 'if', 'then', 'else',
     'is', 'what', 'between', 'tax', 'total', 'sum', 'average', 'prev',
     'line', 'at', 'from', 'now', 'today', 'tomorrow', 'yesterday',

@@ -120,6 +120,12 @@ class Evaluator {
       if (l is PercentValue && r is NumValue) {
         return NumValue(l.ratio * r.value, r.unit);
       }
+      if (l is NumValue && r is PercentValue) {
+        return NumValue(l.value * r.ratio, l.unit);
+      }
+      if (l is MoneyValue && r is PercentValue) {
+        return MoneyValue(l.value * r.ratio, l.currency);
+      }
       return const ErrorValue('cannot multiply');
     }
 
