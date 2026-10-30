@@ -29,6 +29,8 @@ class EditorView extends StatefulWidget {
   final Set<int> folded;
   final void Function(int originalLine)? onToggleFold;
   final bool readOnly;
+  final double scale;
+  final bool showLineNumbers;
   final Color? positiveColour;
   final Color? negativeColour;
 
@@ -49,6 +51,8 @@ class EditorView extends StatefulWidget {
     this.folded = const {},
     this.onToggleFold,
     this.readOnly = false,
+    this.scale = 1,
+    this.showLineNumbers = true,
     this.positiveColour,
     this.negativeColour,
   });
@@ -86,7 +90,7 @@ class _EditorViewState extends State<EditorView> {
 
   @override
   Widget build(BuildContext context) {
-    final style = editorStyle(widget.dark);
+    final style = editorStyle(widget.dark, scale: widget.scale);
     const stepGutter = 30.0; // finger-sized, but the icon stays small
     const gutterW = 54.0; // fold arrow + faint line number, code-editor style
     final answerW = widget.answersVisible ? widget.answerWidth : 0.0;
@@ -107,30 +111,31 @@ class _EditorViewState extends State<EditorView> {
             child: Stack(
               children: [
                 // faint line numbers, aligned with the same text metrics
-                for (var i = 0; i < widget.results.length; i++)
-                  Positioned(
-                    top: (tops.length > i ? tops[i] : 0) + 6,
-                    left: 0,
-                    width: gutterW - 10,
-                    child: Row(
-                      children: [
-                        SizedBox(width: 14, child: _foldArrow(i)),
-                        Expanded(
-                          child: Text(
-                            '${i + 1}',
-                            key: ValueKey('gutter-${i + 1}'),
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontFamily: monoFamily,
-                              fontSize: 11,
-                              color: Palette.faint(widget.dark)
-                                  .withValues(alpha: 0.55),
+                if (widget.showLineNumbers)
+                  for (var i = 0; i < widget.results.length; i++)
+                    Positioned(
+                      top: (tops.length > i ? tops[i] : 0) + 6,
+                      left: 0,
+                      width: gutterW - 10,
+                      child: Row(
+                        children: [
+                          SizedBox(width: 14, child: _foldArrow(i)),
+                          Expanded(
+                            child: Text(
+                              '${i + 1}',
+                              key: ValueKey('gutter-${i + 1}'),
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontFamily: monoFamily,
+                                fontSize: 11,
+                                color: Palette.faint(widget.dark)
+                                    .withValues(alpha: 0.55),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 Padding(
                   padding: EdgeInsets.only(left: gutterW, right: answerW),
                   child: TextField(
@@ -263,7 +268,10 @@ class _EditorViewState extends State<EditorView> {
   /// One answer cell, with drag-to-reference when the sheet supports it.
   Widget _cell(int i, _ColumnMetrics metrics) {
     final r = widget.results[i];
-    final style = answerStyle(widget.dark).copyWith(color: _answerColour(r));
+    final style = answerStyle(
+      widget.dark,
+      scale: widget.scale,
+    ).copyWith(color: _answerColour(r));
     final cell = _tapForSteps(
       line: r.text,
       canExplain:
@@ -419,7 +427,7 @@ class _EditorViewState extends State<EditorView> {
       textDirection: TextDirection.ltr,
       strutStyle: StrutStyle(
         fontFamily: monoFamily,
-        fontSize: 15,
+        fontSize: 15 * widget.scale,
         height: 28 / 15,
         forceStrutHeight: true,
       ),

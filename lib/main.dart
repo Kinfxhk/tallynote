@@ -42,6 +42,10 @@ class _AppState extends State<TallynoteApp> {
   bool _autoRates = true;
   bool _steps = true;
   double _answerW = 212;
+  double _uiScale = 1.0;
+  bool _lineNumbers = true;
+  bool _showTabs = true;
+  final List<String> _tabs = [];
 
   /// non-null while a section is folded: the full document, set aside
   List<String>? _foldSource;
@@ -69,6 +73,9 @@ class _AppState extends State<TallynoteApp> {
     _autoRates = prefs.getBool('tallynote.autoRates') ?? true;
     _steps = prefs.getBool('tallynote.steps') ?? true;
     _answerW = prefs.getDouble('tallynote.answerWidth') ?? 212;
+    _uiScale = prefs.getDouble('tallynote.uiScale') ?? 1.0;
+    _lineNumbers = prefs.getBool('tallynote.lineNumbers') ?? true;
+    _showTabs = prefs.getBool('tallynote.showTabs') ?? true;
     _signColours = prefs.getBool('tallynote.signColours') ?? true;
     _posName = prefs.getString('tallynote.posColour') ?? '';
     _negName = prefs.getString('tallynote.negColour') ?? '';
@@ -85,7 +92,21 @@ class _AppState extends State<TallynoteApp> {
   }
 
   void _onStore() {
+    final id = _store.activeId;
+    if (id != null && !_tabs.contains(id)) _tabs.add(id);
+    if (_tabs.length > 8) _tabs.removeAt(0);
     if (_store.activeId != _boundSheetId) _bindSheet();
+  }
+
+  void _closeTab(String id) {
+    _tabs.remove(id);
+    if (_store.activeId == id && _tabs.isNotEmpty) _store.select(_tabs.last);
+    setState(() {});
+  }
+
+  void _zoom(double factor) {
+    setState(() => _uiScale = (_uiScale * factor).clamp(0.75, 2.5));
+    _saveSettings();
   }
 
   Set<int> get _foldable {
@@ -196,6 +217,9 @@ class _AppState extends State<TallynoteApp> {
     await prefs.setBool('tallynote.autoRates', _autoRates);
     await prefs.setBool('tallynote.steps', _steps);
     await prefs.setDouble('tallynote.answerWidth', _answerW);
+    await prefs.setDouble('tallynote.uiScale', _uiScale);
+    await prefs.setBool('tallynote.lineNumbers', _lineNumbers);
+    await prefs.setBool('tallynote.showTabs', _showTabs);
     await prefs.setBool('tallynote.signColours', _signColours);
     await prefs.setString('tallynote.posColour', _posName);
     await prefs.setString('tallynote.negColour', _negName);
@@ -239,6 +263,26 @@ class _AppState extends State<TallynoteApp> {
       theme: theme,
       home: CallbackShortcuts(
         bindings: {
+          const SingleActivator(LogicalKeyboardKey.equal, meta: true): () =>
+              _zoom(1.25),
+          const SingleActivator(LogicalKeyboardKey.equal, control: true): () =>
+              _zoom(1.25),
+          const SingleActivator(LogicalKeyboardKey.minus, meta: true): () =>
+              _zoom(0.8),
+          const SingleActivator(LogicalKeyboardKey.minus, control: true): () =>
+              _zoom(0.8),
+          const SingleActivator(LogicalKeyboardKey.digit0, meta: true): () {
+            setState(() => _uiScale = 1.0);
+            _saveSettings();
+          },
+          const SingleActivator(LogicalKeyboardKey.digit0, control: true): () {
+            setState(() => _uiScale = 1.0);
+            _saveSettings();
+          },
+          const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () =>
+              _store.create(),
+          const SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
+              _store.create(),
           const SingleActivator(LogicalKeyboardKey.backslash, meta: true):
               _toggleSidebar,
           const SingleActivator(LogicalKeyboardKey.backslash, control: true):
@@ -290,6 +334,9 @@ class _AppState extends State<TallynoteApp> {
                             autoRates: _autoRates,
                             steps: _steps,
                             signColours: _signColours,
+                            lineNumbers: _lineNumbers,
+                            showTabs: _showTabs,
+                            uiScale: _uiScale,
                             posName: _posName,
                             negName: _negName,
                             onAnswers: (v) {
@@ -320,6 +367,18 @@ class _AppState extends State<TallynoteApp> {
                               setState(() => _negName = name);
                               _saveSettings();
                             },
+                            onLineNumbers: (v) {
+                              setState(() => _lineNumbers = v);
+                              _saveSettings();
+                            },
+                            onShowTabs: (v) {
+                              setState(() => _showTabs = v);
+                              _saveSettings();
+                            },
+                            onUiScale: (v) {
+                              setState(() => _uiScale = v);
+                              _saveSettings();
+                            },
                             onRefreshRates: () async {
                               final ok = await Rates.refresh();
                               if (!mounted) return false;
@@ -332,6 +391,22 @@ class _AppState extends State<TallynoteApp> {
                           ),
                         ),
                         Divider(height: 1, color: Palette.hairline(_dark)),
+                        if (_showTabs && _tabs.length > 1)
+                          _TabBar(
+                            dark: _dark,
+                            tabs: _tabs,
+                            activeId: _store.activeId,
+                            titleOf: (id) {
+                              final s = _store.sheets
+                                  .where((x) => x.id == id)
+                                  .firstOrNull;
+                              return s == null || s.title.isEmpty
+                                  ? 'Untitled'
+                                  : s.title;
+                            },
+                            onSelect: _store.select,
+                            onClose: _closeTab,
+                          ),
                         Expanded(
                           child: Stack(
                             children: [
@@ -344,6 +419,8 @@ class _AppState extends State<TallynoteApp> {
                                   showSteps: _steps,
                                   explain: _engine.explain,
                                   answerWidth: _answerW,
+                                  scale: _uiScale,
+                                  showLineNumbers: _lineNumbers,
                                   onInsertReference: _insertReference,
                                   lineMap: _lineMap,
                                   foldable: _foldable,
@@ -641,6 +718,67 @@ class _FormatBar extends StatelessWidget {
             const SizedBox(width: 10),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TabBar extends StatelessWidget {
+  final bool dark;
+  final List<String> tabs;
+  final String? activeId;
+  final String Function(String id) titleOf;
+  final void Function(String id) onSelect;
+  final void Function(String id) onClose;
+
+  const _TabBar({
+    required this.dark,
+    required this.tabs,
+    required this.activeId,
+    required this.titleOf,
+    required this.onSelect,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Palette.hairline(dark))),
+      ),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          for (final id in tabs)
+            Pressable(
+              onTap: () => onSelect(id),
+              padding: const EdgeInsets.fromLTRB(8, 3, 4, 3),
+              child: Row(
+                children: [
+                  Text(
+                    titleOf(id),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: id == activeId
+                          ? Palette.fg(dark)
+                          : Palette.faint(dark),
+                    ),
+                  ),
+                  Pressable(
+                    onTap: () => onClose(id),
+                    padding: const EdgeInsets.all(3),
+                    child: Icon(
+                      Icons.close,
+                      size: 11,
+                      color: Palette.faint(dark),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tallynote/main.dart';
 import 'package:tallynote/ui/editor_view.dart';
+import 'package:tallynote/ui/feedback.dart';
 import 'package:tallynote/ui/theme.dart';
 import 'package:tallynote/ui/sidebar.dart';
 
@@ -217,6 +218,40 @@ void main() {
     expect(field.readOnly, isFalse);
   });
 
+  testWidgets('settings is tabbed', (tester) async {
+    await boot(tester);
+    await tester.tap(find.byTooltip('Settings').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Editor'), findsOneWidget);
+    expect(find.text('Data'), findsOneWidget);
+
+    await tester.tap(find.text('Editor'));
+    await tester.pumpAndSettle();
+    expect(find.text('Text size'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('200%'), findsOneWidget);
+  });
+
+  testWidgets('the editor honours the UI scale', (tester) async {
+    final c = TextEditingController(text: '1+1');
+    addTearDown(c.dispose);
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: EditorView(
+          controller: c,
+          results: const [],
+          dark: false,
+          scale: 1.5,
+        ),
+      ),
+    ));
+    await tester.pump();
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.style?.fontSize, closeTo(22.5, 0.1));
+  });
+
   testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(
@@ -229,9 +264,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Settings').first);
     await tester.pumpAndSettle();
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
 
-    await tester.tap(find.text('Answers'), warnIfMissed: false);
+    // Appearance: dark mode, answers, sign colours
+    await tester.tap(find.byType(Switch).at(1));
     await tester.pumpAndSettle();
     expect(find.textContaining('14'), findsNothing);
   });

@@ -26,17 +26,17 @@ class Palette {
 
 const monoFamily = 'monospace';
 
-TextStyle editorStyle(bool dark) => TextStyle(
+TextStyle editorStyle(bool dark, {double scale = 1}) => TextStyle(
   fontFamily: monoFamily,
-  fontSize: 15,
+  fontSize: 15 * scale,
   height: 28 / 15,
   color: Palette.fg(dark),
   letterSpacing: 0.1,
 );
 
-TextStyle answerStyle(bool dark) => TextStyle(
+TextStyle answerStyle(bool dark, {double scale = 1}) => TextStyle(
   fontFamily: monoFamily,
-  fontSize: 15,
+  fontSize: 15 * scale,
   height: 28 / 15,
   color: Palette.answer(dark),
   fontFeatures: const [FontFeature.tabularFigures()],
