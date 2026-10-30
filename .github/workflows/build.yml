@@ -82,7 +82,7 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter build web --release --base-href /tallynote/
+      - run: flutter build web --release --base-href /tallynote/ --no-web-resources-cdn
       - uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/main'
         with:

@@ -23,7 +23,7 @@ class Rates {
   static String? updatedDate;
   static bool fromNetwork = false;
 
-  static Future<void> load() async {
+  static Future<void> load({bool allowNetwork = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final cached = prefs.getString(_key);
     if (cached != null) {
@@ -35,7 +35,7 @@ class Rates {
         updatedDate = prefs.getString(_dateKey);
       } catch (_) {}
     }
-    await refresh();
+    if (allowNetwork) await refresh();
   }
 
   static Future<bool> refresh() async {

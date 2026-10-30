@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/document.dart';
 import 'data/rates.dart';
 import 'engine/engine.dart';
 import 'ui/editor_view.dart';
+import 'ui/settings_sheet.dart';
 import 'ui/sidebar.dart';
 import 'ui/theme.dart';
 
@@ -26,12 +28,14 @@ class _AppState extends State<TallynoteApp> {
   final _store = DocumentStore();
   final _controller = TextEditingController();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _navKey = GlobalKey<NavigatorState>();
 
   late SheetEngine _engine;
   List<LineResult> _results = [];
   bool _dark = false;
   bool _sidebarOpen = true;
   bool _answersVisible = true;
+  bool _autoRates = true;
   bool _syncing = false;
   Timer? _saveTimer;
   String? _boundSheetId;
@@ -45,10 +49,15 @@ class _AppState extends State<TallynoteApp> {
   }
 
   Future<void> _boot() async {
+    final prefs = await SharedPreferences.getInstance();
+    _dark = prefs.getBool('tallynote.dark') ?? false;
+    _answersVisible = prefs.getBool('tallynote.answers') ?? true;
+    _autoRates = prefs.getBool('tallynote.autoRates') ?? true;
+
     await _store.load();
     _store.addListener(_onStore);
     _bindSheet();
-    await Rates.load();
+    await Rates.load(allowNetwork: _autoRates);
     if (!mounted) return;
     setState(() {
       _engine = SheetEngine(rates: Rates.current);
@@ -106,6 +115,13 @@ class _AppState extends State<TallynoteApp> {
 
   void _toggleSidebar() => setState(() => _sidebarOpen = !_sidebarOpen);
 
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('tallynote.dark', _dark);
+    await prefs.setBool('tallynote.answers', _answersVisible);
+    await prefs.setBool('tallynote.autoRates', _autoRates);
+  }
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
@@ -120,6 +136,7 @@ class _AppState extends State<TallynoteApp> {
     return MaterialApp(
       title: 'Tallynote',
       debugShowCheckedModeBanner: false,
+      navigatorKey: _navKey,
       theme: theme,
       home: CallbackShortcuts(
         bindings: {
@@ -130,10 +147,12 @@ class _AppState extends State<TallynoteApp> {
           const SingleActivator(LogicalKeyboardKey.keyA,
               meta: true, shift: true): () {
             setState(() => _answersVisible = !_answersVisible);
+            _saveSettings();
           },
           const SingleActivator(LogicalKeyboardKey.keyA,
               control: true, shift: true): () {
             setState(() => _answersVisible = !_answersVisible);
+            _saveSettings();
           },
         },
         child: Focus(
@@ -155,29 +174,36 @@ class _AppState extends State<TallynoteApp> {
                         _Header(
                           dark: _dark,
                           sidebarOpen: _sidebarOpen && wide,
-                          answersVisible: _answersVisible,
                           onMenu: wide
                               ? _toggleSidebar
                               : () => _scaffoldKey.currentState?.openDrawer(),
-                          onToggleAnswers: () =>
-                              setState(() => _answersVisible = !_answersVisible),
-                          onToggleTheme: () => setState(() => _dark = !_dark),
-                          onRefreshRates: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final ok = await Rates.refresh();
-                            if (!mounted) return;
-                            setState(() {
-                              _engine = SheetEngine(rates: Rates.current);
-                              _recalc();
-                            });
-                            if (!ok) {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Offline — kept the last rates')),
-                              );
-                            }
-                          },
+                          onSettings: () => showSettingsSheet(
+                            context: _navKey.currentContext!,
+                            dark: _dark,
+                            answersVisible: _answersVisible,
+                            autoRates: _autoRates,
+                            onAnswers: (v) {
+                              setState(() => _answersVisible = v);
+                              _saveSettings();
+                            },
+                            onTheme: (v) {
+                              setState(() => _dark = v);
+                              _saveSettings();
+                            },
+                            onAutoRates: (v) {
+                              setState(() => _autoRates = v);
+                              _saveSettings();
+                            },
+                            onRefreshRates: () async {
+                              final ok = await Rates.refresh();
+                              if (!mounted) return false;
+                              setState(() {
+                                _engine = SheetEngine(rates: Rates.current);
+                                _recalc();
+                              });
+                              return ok;
+                            },
+                          ),
                         ),
                         Divider(height: 1, color: Palette.hairline(_dark)),
                         Expanded(
@@ -210,20 +236,14 @@ class _AppState extends State<TallynoteApp> {
 class _Header extends StatelessWidget {
   final bool dark;
   final bool sidebarOpen;
-  final bool answersVisible;
   final VoidCallback onMenu;
-  final VoidCallback onToggleAnswers;
-  final VoidCallback onToggleTheme;
-  final VoidCallback onRefreshRates;
+  final VoidCallback onSettings;
 
   const _Header({
     required this.dark,
     required this.sidebarOpen,
-    required this.answersVisible,
     required this.onMenu,
-    required this.onToggleAnswers,
-    required this.onToggleTheme,
-    required this.onRefreshRates,
+    required this.onSettings,
   });
 
   @override
@@ -245,24 +265,10 @@ class _Header extends StatelessWidget {
             ),
             const Spacer(),
             _IconAction(
-              icon: answersVisible
-                  ? Icons.visibility_outlined
-                  : Icons.visibility_off_outlined,
-              tooltip: 'Answers  ⌘⇧A',
+              icon: Icons.tune,
+              tooltip: 'Settings',
               dark: dark,
-              onTap: onToggleAnswers,
-            ),
-            _IconAction(
-              icon: Icons.currency_exchange,
-              tooltip: 'Refresh rates',
-              dark: dark,
-              onTap: onRefreshRates,
-            ),
-            _IconAction(
-              icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              tooltip: 'Theme',
-              dark: dark,
-              onTap: onToggleTheme,
+              onTap: onSettings,
             ),
           ],
         ),

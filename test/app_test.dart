@@ -57,7 +57,7 @@ void main() {
     expect(find.byType(Sidebar), findsOneWidget);
   });
 
-  testWidgets('answers can be hidden', (tester) async {
+  testWidgets('answers can be hidden from settings', (tester) async {
     await boot(tester);
     final editor = find.descendant(
       of: find.byType(EditorView),
@@ -67,8 +67,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('14'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Answers  ⌘⇧A').first);
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byTooltip('Settings').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Settings'), findsOneWidget);
+
+    await tester.tap(find.text('Answers'), warnIfMissed: false);
+    await tester.pumpAndSettle();
     expect(find.text('14'), findsNothing);
   });
 }
