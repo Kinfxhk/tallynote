@@ -3,16 +3,30 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class Folder {
+  final String id;
+  String name;
+
+  Folder({required this.id, required this.name});
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+
+  factory Folder.fromJson(Map<String, dynamic> j) =>
+      Folder(id: j['id'] as String, name: j['name'] as String? ?? 'Folder');
+}
+
 class Sheet {
   final String id;
   String title;
   String content;
+  String? folderId;
   DateTime updated;
 
   Sheet({
     required this.id,
     required this.title,
     required this.content,
+    this.folderId,
     DateTime? updated,
   }) : updated = updated ?? DateTime.now();
 
@@ -20,6 +34,7 @@ class Sheet {
     'id': id,
     'title': title,
     'content': content,
+    'folderId': folderId,
     'updated': updated.toIso8601String(),
   };
 
@@ -27,17 +42,20 @@ class Sheet {
     id: j['id'] as String,
     title: j['title'] as String? ?? 'Untitled',
     content: j['content'] as String? ?? '',
+    folderId: j['folderId'] as String?,
     updated: DateTime.tryParse(j['updated'] as String? ?? ''),
   );
 }
 
-/// Sheets live in one JSON blob in shared preferences: small, portable and
-/// enough for a notepad. Swap for file IO when sheets grow past a few MB.
+/// Sheets and folders live in one JSON blob in shared preferences: small,
+/// portable and enough for a notepad. Swap for file IO when sheets grow past
+/// a few MB.
 class DocumentStore extends ChangeNotifier {
   static const _key = 'tallynote.sheets.v1';
   static const _activeKey = 'tallynote.active.v1';
 
   final List<Sheet> sheets = [];
+  final List<Folder> folders = [];
   String? activeId;
   bool loaded = false;
 
@@ -45,21 +63,65 @@ class DocumentStore extends ChangeNotifier {
       sheets.where((s) => s.id == activeId).firstOrNull ??
       (sheets.isEmpty ? null : sheets.first);
 
+  /// Newest first, optionally filtered to one folder (null = unfiled).
+  List<Sheet> inFolder(String? folderId) {
+    final list = sheets.where((s) => s.folderId == folderId).toList()
+      ..sort((a, b) => b.updated.compareTo(a.updated));
+    return list;
+  }
+
+  /// Case-insensitive title/content search across every folder.
+  List<Sheet> search(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+    return sheets
+        .where((s) =>
+            s.title.toLowerCase().contains(q) ||
+            s.content.toLowerCase().contains(q))
+        .toList()
+      ..sort((a, b) => b.updated.compareTo(a.updated));
+  }
+
+  Folder? folderOf(Sheet s) =>
+      s.folderId == null ? null : folders.where((f) => f.id == s.folderId).firstOrNull;
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw != null) {
       try {
-        final list = jsonDecode(raw) as List;
-        sheets
-          ..clear()
-          ..addAll(list.map((e) => Sheet.fromJson(e as Map<String, dynamic>)));
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          // v1: a bare list of sheets, no folders
+          sheets
+            ..clear()
+            ..addAll(decoded.map((e) => Sheet.fromJson(e as Map<String, dynamic>)));
+        } else if (decoded is Map) {
+          final m = decoded as Map<String, dynamic>;
+          folders
+            ..clear()
+            ..addAll(
+              (m['folders'] as List? ?? [])
+                  .map((e) => Folder.fromJson(e as Map<String, dynamic>)),
+            );
+          sheets
+            ..clear()
+            ..addAll(
+              (m['sheets'] as List? ?? [])
+                  .map((e) => Sheet.fromJson(e as Map<String, dynamic>)),
+            );
+        }
       } catch (_) {
         // corrupt store: start clean rather than crash
       }
     }
     if (sheets.isEmpty) {
       sheets.add(Sheet(id: _newId(), title: 'Untitled', content: ''));
+    }
+    // drop sheets pointing at folders that no longer exist
+    final ids = folders.map((f) => f.id).toSet();
+    for (final s in sheets) {
+      if (s.folderId != null && !ids.contains(s.folderId)) s.folderId = null;
     }
     activeId = prefs.getString(_activeKey) ?? sheets.first.id;
     if (!sheets.any((s) => s.id == activeId)) activeId = sheets.first.id;
@@ -71,7 +133,11 @@ class DocumentStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _key,
-      jsonEncode(sheets.map((s) => s.toJson()).toList()),
+      jsonEncode({
+        'v': 2,
+        'folders': folders.map((f) => f.toJson()).toList(),
+        'sheets': sheets.map((s) => s.toJson()).toList(),
+      }),
     );
     if (activeId != null) await prefs.setString(_activeKey, activeId!);
   }
@@ -82,8 +148,13 @@ class DocumentStore extends ChangeNotifier {
     _persist();
   }
 
-  Sheet create() {
-    final s = Sheet(id: _newId(), title: 'Untitled', content: '');
+  Sheet create({String? folderId}) {
+    final s = Sheet(
+      id: _newId(),
+      title: 'Untitled',
+      content: '',
+      folderId: folderId,
+    );
     sheets.insert(0, s);
     activeId = s.id;
     notifyListeners();
@@ -111,6 +182,45 @@ class DocumentStore extends ChangeNotifier {
     _persist();
   }
 
+  // ---- folders -------------------------------------------------------------
+
+  Folder createFolder(String name) {
+    final f = Folder(id: _newId(), name: name.trim().isEmpty ? 'Folder' : name.trim());
+    folders.add(f);
+    notifyListeners();
+    _persist();
+    return f;
+  }
+
+  void renameFolder(String id, String name) {
+    final f = folders.where((e) => e.id == id).firstOrNull;
+    if (f == null || name.trim().isEmpty) return;
+    f.name = name.trim();
+    notifyListeners();
+    _persist();
+  }
+
+  /// Deleting a folder keeps its sheets: they fall back to unfiled.
+  void deleteFolder(String id) {
+    folders.removeWhere((f) => f.id == id);
+    for (final s in sheets) {
+      if (s.folderId == id) s.folderId = null;
+    }
+    notifyListeners();
+    _persist();
+  }
+
+  void moveSheet(String sheetId, String? folderId) {
+    final s = sheets.where((e) => e.id == sheetId).firstOrNull;
+    if (s == null) return;
+    s.folderId = folderId;
+    s.updated = DateTime.now();
+    notifyListeners();
+    _persist();
+  }
+
+  // a counter keeps ids unique when several objects are made in one tick
+  static int _seq = 0;
   static String _newId() =>
-      DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+      '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${(_seq++).toRadixString(36)}';
 }

@@ -62,6 +62,11 @@ sum                          →  -520,000
 - `// any line` becomes a draft: greyed, not calculated
 - `**bold**`, `_italic_`, `~~strike~~`, `__underline__`, `{red}colour{/}` — select text and use the small format bar; markers are plain text, so the file stays portable and the maths still works
 
+**Workspace**
+- Folders in the sidebar, with an unfiled group for everything else
+- Search across titles and note bodies
+- Long-press a sheet to move it or delete it; long-press a folder to rename or delete it (deleting a folder keeps its sheets)
+
 **Answers you can trust**
 - Press the chevron beside a complex answer to see every step:
 
