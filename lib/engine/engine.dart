@@ -918,9 +918,16 @@ class SheetEngine {
   }
 
   Value? _loneNumber(String s) {
-    final m = RegExp(r'-?\d[\d,]*(?:\.\d+)?').allMatches(s).toList();
+    final dec = RegExp.escape(format.decimal);
+    final group = format.group.isEmpty
+        ? '\\d+'
+        : '\\d(?:\\d|${RegExp.escape(format.group)})*';
+    final m = RegExp('-?$group(?:$dec\\d+)?').allMatches(s).toList();
     if (m.length == 1) {
-      final v = double.tryParse(m.first.group(0)!.replaceAll(',', ''));
+      var raw = m.first.group(0)!;
+      if (format.group.isNotEmpty) raw = raw.replaceAll(format.group, '');
+      raw = raw.replaceAll(format.decimal, '.');
+      final v = double.tryParse(raw);
       if (v != null) return NumValue(v);
     }
     return null;

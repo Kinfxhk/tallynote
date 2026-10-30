@@ -218,9 +218,11 @@ class UnitRegistry {
   }
 
   static const _imperial = {'mph', 'mi', 'ft', 'yd', 'in'};
+  static const _nautical = {'knot', 'nmi'};
 
   Unit _pickLength(double meters, List<Unit> hints) {
     final ids = hints.map((e) => e.id).toSet();
+    if (ids.any(_nautical.contains)) return lookup('nmi')!;
     if (ids.any(_imperial.contains)) {
       if (meters >= 160.9344) return lookup('mi')!;
       return lookup('ft')!;

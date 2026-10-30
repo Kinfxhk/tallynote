@@ -173,4 +173,22 @@ void main() {
       expect(prefs.getString(key), contains('1+1'));
     },
   );
+
+  test('a failed backup refuses to overwrite the unreadable library', () async {
+    const broken = '{not json';
+    SharedPreferences.setMockInitialValues({key: broken});
+    DocumentStore.debugKeepBackup = (_, _) async => false;
+    addTearDown(() => DocumentStore.debugKeepBackup = null);
+
+    final store = DocumentStore();
+    await store.load();
+    expect(store.libraryUnreadable, isTrue);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(DocumentStore.backupKey), isNull);
+
+    store.update(store.sheets.first.id, content: '1+1');
+    await Future<void>.delayed(Duration.zero);
+    expect(prefs.getString(key), broken);
+    expect(prefs.getString(key), isNot(contains('1+1')));
+  });
 }

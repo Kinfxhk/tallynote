@@ -81,6 +81,7 @@ class Lexer {
   final String src;
   final NumberFormat format;
   int _i = 0;
+  int _parenDepth = 0;
   final List<Token> out = [];
 
   Lexer(String source, {this.format = NumberFormat.us})
@@ -95,6 +96,7 @@ class Lexer {
       }
       if (_isDigit(c) ||
           (c == format.decimal &&
+              !_decimalIsArgumentSeparator(c) &&
               _i + 1 < src.length &&
               _isDigit(src[_i + 1]))) {
         _number();
@@ -125,10 +127,12 @@ class Lexer {
         continue;
       }
       if (c == '(') {
+        _parenDepth++;
         out.add(Token(TokType.lparen, '(', _i++));
         continue;
       }
       if (c == ')') {
+        if (_parenDepth > 0) _parenDepth--;
         out.add(Token(TokType.rparen, ')', _i++));
         continue;
       }
@@ -166,6 +170,7 @@ class Lexer {
         _i++; // thousands / grouping separator
       } else if (c == format.decimal &&
           !sawDot &&
+          !_decimalIsArgumentSeparator(c) &&
           _i + 1 < src.length &&
           _isDigit(src[_i + 1])) {
         sawDot = true;
@@ -196,6 +201,12 @@ class Lexer {
     }
     return true;
   }
+
+  /// Inside `min(1,2)` the comma separates arguments. In EU format that same
+  /// character is the decimal mark, but only outside a call: `1,5` is 1.5,
+  /// while `min(1,5)` is still min of 1 and 5.
+  bool _decimalIsArgumentSeparator(String c) =>
+      c == ',' && format.decimal == ',' && _parenDepth > 0;
 
   /// A grouping mark only counts when it is followed by exactly three digits
   /// and then a boundary (`1.234` is a thousand, `1.2345` is not).

@@ -23,6 +23,7 @@ void main() {
     expect(one('2 h * 100 km/h'), '200 km');
     expect(one('10 m / 2 s'), '5 m/s');
     expect(one('30 km / 0.5 h'), '60 km/h');
+    expect(one('1 h * 10 knot'), '10 nmi');
   });
 
   test('number format and the yen sign', () {
@@ -37,6 +38,20 @@ void main() {
 
     expect(one('9,875'), '9,875');
     expect((engine.evaluate(['9,875']).first.value as NumValue).value, 9875);
+
+    // A comma inside a call stays an argument separator in EU format.
+    expect(eu.evaluate(['min(1,2)']).first.display, '1');
+    expect(eu.evaluate(['pow(2,8)']).first.display, '256');
+    expect(eu.evaluate(['root(8,3)']).first.display, '2');
+    expect(
+      (eu.evaluate(['1,5']).first.value as NumValue).value,
+      closeTo(1.5, 1e-9),
+    );
+    // An unfinished line falls back to the one number, still in EU format.
+    final half = eu.evaluate(['1,5 +']).first;
+    expect(half.engineError, isFalse);
+    expect((half.value as NumValue).value, closeTo(1.5, 1e-9));
+    expect(half.display, '1,5');
 
     final cny = SheetEngine(format: NumberFormat.us.withYen('CNY'));
     final yuan = cny.evaluate(['¥100']).first;

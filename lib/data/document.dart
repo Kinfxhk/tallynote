@@ -77,6 +77,12 @@ class DocumentStore extends ChangeNotifier {
   bool libraryUnreadable = false;
   bool _protectCorrupt = false;
 
+  /// Test hook. `SharedPreferences.setString` reports failure as `false`
+  /// rather than a throw; production passes that result through.
+  @visibleForTesting
+  static Future<bool> Function(SharedPreferences prefs, String raw)?
+  debugKeepBackup;
+
   Sheet? get active =>
       sheets.where((s) => s.id == activeId).firstOrNull ??
       (sheets.isEmpty ? null : sheets.first);
@@ -167,8 +173,9 @@ class DocumentStore extends ChangeNotifier {
 
   Future<bool> _keepBackup(SharedPreferences prefs, String raw) async {
     try {
-      await prefs.setString(backupKey, raw);
-      return true;
+      final hook = debugKeepBackup;
+      if (hook != null) return await hook(prefs, raw);
+      return await prefs.setString(backupKey, raw);
     } catch (e, st) {
       debugPrint('Tallynote: could not keep a backup of the library ($e)\n$st');
       return false;
