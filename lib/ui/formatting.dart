@@ -161,8 +161,11 @@ class Fmt {
       var last = 0;
       for (final m in pattern.allMatches(text)) {
         final word = m.group(0)!;
+        // the first word of a line names it; it is not a reference
+        final isOwnName = m.start == 0;
         final isRef =
-            word.startsWith('line ') || labels.contains(word.toLowerCase());
+            word.startsWith('line ') ||
+            (!isOwnName && labels.contains(word.toLowerCase()));
         if (!isRef) continue;
         if (m.start > last) {
           out.add(

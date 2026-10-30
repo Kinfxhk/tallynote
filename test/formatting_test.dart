@@ -37,10 +37,9 @@ void main() {
       expect(out, '**2000** + 3000');
       expect(newSel.textInside(out), '2000');
     });
-
-    test('a line name is painted as a chip', () {
+    test('a reference is painted as a chip', () {
       final spans = Fmt.withReferences(
-        [const TextSpan(text: 'lucid * 2', style: TextStyle())],
+        [const TextSpan(text: 'cost + lucid', style: TextStyle())],
         const TextStyle(),
         labels: {'lucid'},
         dark: false,
@@ -50,8 +49,25 @@ void main() {
       );
       expect(chip.style?.backgroundColor, isNotNull);
       expect(chip.style?.fontWeight, FontWeight.w600);
-      // non-reference words keep their own style
-      expect(spans.whereType<TextSpan>().any((s) => s.text == ' * 2'), isTrue);
+      expect(
+        spans.whereType<TextSpan>().any((s) => s.text == 'cost + '),
+        isTrue,
+      );
+    });
+
+    test('own first word is not a chip', () {
+      final spans = Fmt.withReferences(
+        [const TextSpan(text: 'lucid * 2', style: TextStyle())],
+        const TextStyle(),
+        labels: {'lucid'},
+        dark: false,
+      );
+      expect(
+        spans.whereType<TextSpan>().every(
+          (s) => s.style?.backgroundColor == null,
+        ),
+        isTrue,
+      );
     });
 
     test('line N is a chip even without labels', () {

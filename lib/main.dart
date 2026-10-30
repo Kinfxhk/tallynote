@@ -172,11 +172,15 @@ class _AppState extends State<TallynoteApp> {
   @override
   Widget build(BuildContext context) {
     _controller.dark = _dark;
-    _controller.labels = {
-      for (final r in _results)
-        if (r.display != null && SheetEngine.labelOf(r.text) != null)
-          SheetEngine.labelOf(r.text)!,
-    };
+    // each line only sees the names defined above it
+    final labelsByLine = <Set<String>>[];
+    final seen = <String>{};
+    for (final r in _results) {
+      labelsByLine.add(Set.of(seen));
+      final label = r.display == null ? null : SheetEngine.labelOf(r.text);
+      if (label != null) seen.add(label);
+    }
+    _controller.labelsByLine = labelsByLine;
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final theme = buildTheme(_dark);
 

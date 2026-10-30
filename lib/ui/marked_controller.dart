@@ -8,8 +8,9 @@ import 'theme.dart';
 class MarkedController extends TextEditingController {
   bool dark;
 
-  /// Words that name an earlier line; they are drawn as reference chips.
-  Set<String> labels = const {};
+  /// For each line, the names of the lines *above* it. Only those are live
+  /// references; a line's own name is just a name.
+  List<Set<String>> labelsByLine = const [];
   MarkedController({super.text, required this.dark});
 
   @override
@@ -39,7 +40,7 @@ class MarkedController extends TextEditingController {
           Fmt.withReferences(
             Fmt.spans(line, base),
             base,
-            labels: labels,
+            labels: i < labelsByLine.length ? labelsByLine[i] : const {},
             dark: dark,
           ),
         );
