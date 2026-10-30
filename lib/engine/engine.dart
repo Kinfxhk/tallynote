@@ -394,15 +394,20 @@ class SheetEngine {
     throw lastError ?? ParseError('empty');
   }
 
+  /// Skips a leading *prose* prefix only. Once the prefix contains a digit or
+  /// an operator we stop, so "4300 X 30%" is not rescued as "30%" — a wrong
+  /// answer is worse than no answer.
   Iterable<String> _candidates(String src) sync* {
     yield src;
     for (var i = 1; i < src.length; i++) {
-      // only start at the beginning of a word
-      if (src[i - 1] != ' ') continue;
-      if (src[i] == ' ') continue;
+      if (src[i - 1] != ' ' || src[i] == ' ') continue;
+      if (!_isProse(src.substring(0, i))) return;
       yield src.substring(i);
     }
   }
+
+  bool _isProse(String s) =>
+      !RegExp(r'[0-9+\-*/^%().$,=<>×÷]').hasMatch(s);
 
   String _literal(Value v) {
     if (v is NumValue) {

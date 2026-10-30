@@ -115,9 +115,10 @@ class Parser {
     return false;
   }
 
-  bool _isWordToken(String s) {
+  /// Only a lowercase "x" is a times sign; "X" is left alone for variables.
+  bool _isLowerX() {
     final c = cur;
-    return c != null && c.type == TokType.word && c.text.toLowerCase() == s;
+    return c != null && c.type == TokType.word && c.text == 'x';
   }
 
   bool _matchRparen() {
@@ -147,9 +148,12 @@ class Parser {
   Node _additive() {
     var left = _multiplicative();
     while (true) {
-      if (_matchOp('+') || _matchWords(['plus']) || _matchWords(['and'])) {
+      if (_matchOp('+') || _matchWords(['plus']) || _matchWords(['and']) ||
+          _matchWords(['加']) || _matchWords(['加上'])) {
         left = BinNode('+', left, _multiplicative());
-      } else if (_matchOp('-') || _matchWords(['minus'])) {
+      } else if (_matchOp('-') || _matchWords(['minus']) ||
+          _matchWords(['減']) || _matchWords(['減去']) ||
+          _matchWords(['减']) || _matchWords(['减去'])) {
         left = BinNode('-', left, _multiplicative());
       } else {
         break;
@@ -161,9 +165,10 @@ class Parser {
   Node _multiplicative() {
     var left = _unary();
     while (true) {
-      if (_matchOp('*') || _matchOp('×') || _matchWords(['times'])) {
+      if (_matchOp('*') || _matchOp('×') || _matchWords(['times']) ||
+          _matchWords(['乘']) || _matchWords(['乘以'])) {
         left = BinNode('*', left, _unary());
-      } else if (_isWordToken('x')) {
+      } else if (_isLowerX()) {
         // "x" is how people type × on a keyboard
         _p++;
         left = BinNode('*', left, _unary());
@@ -171,7 +176,8 @@ class Parser {
         left = BinNode('*', left, _unary());
       } else if (_matchOp('/') || _matchOp('÷') ||
           _matchWords(['divided', 'by']) || _matchWords(['over']) ||
-          _matchWords(['into']) || _matchWords(['per'])) {
+          _matchWords(['into']) || _matchWords(['per']) ||
+          _matchWords(['除']) || _matchWords(['除以'])) {
         left = BinNode('/', left, _unary());
       } else if (cur?.type == TokType.lparen) {
         left = BinNode('*', left, _unary()); // implicit: 2(3+4)
@@ -246,6 +252,7 @@ class Parser {
 
   static const _reserved = {
     'in', 'to', 'as', 'of', 'off', 'per', 'plus', 'minus', 'times', 'x',
+    '加', '加上', '減', '減去', '减', '减去', '乘', '乘以', '除', '除以',
     'multiplied', 'divided', 'over', 'into', 'and', 'if', 'then', 'else',
     'is', 'what', 'between', 'tax', 'total', 'sum', 'average', 'prev',
     'line', 'at', 'from', 'now', 'today', 'tomorrow', 'yesterday',

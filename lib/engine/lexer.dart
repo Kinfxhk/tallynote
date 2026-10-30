@@ -106,8 +106,11 @@ class Lexer {
 
   void _word() {
     final start = _i;
+    final cjkStart = _isCjk(src[_i]);
     while (_i < src.length) {
       final c = src[_i];
+      // "30乘3": 乘 is a word, the 3 after it is a number
+      if (cjkStart && _isDigit(c)) break;
       if (_isLetter(c) || _isDigit(c) || c == '_' || c == '°' || c == '/' || c == '%') {
         // stop '/' inside a word only when it starts a unit ratio like MB/s
         if (c == '/' && !(_i + 1 < src.length && _isLetter(src[_i + 1]))) break;

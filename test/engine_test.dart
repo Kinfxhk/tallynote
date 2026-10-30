@@ -76,8 +76,21 @@ void main() {
 
   test('x as multiplication and trailing words', () {
     expect(one('4300 x 30%'), '1,290');
-    expect(one('4300 X 30% consistency'), '1,290');
     expect(one(r'$500 x 3'), r'$1,500');
+  });
+
+  test('chinese operators', () {
+    expect(one('30乘3'), '90');
+    expect(one('30 乘 3'), '90');
+    expect(one('10除以2'), '5');
+    expect(one('5加3'), '8');
+    expect(one('10減4'), '6');
+    expect(one('含運費 30乘3'), '90');
+  });
+
+  test('uppercase X is not a times sign', () {
+    expect(one('4300 x 30%'), '1,290');
+    expect(one('4300 X 30%'), isNull);
   });
 
   test('reads past leading prose', () {
