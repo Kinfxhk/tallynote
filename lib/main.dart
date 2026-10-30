@@ -95,10 +95,13 @@ class _AppState extends State<TallynoteApp> {
           .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
           .replaceAll(RegExp(r'^#\s*'), '')
           .trim();
+      final sheet = _store.sheets.where((x) => x.id == id).firstOrNull;
       _store.update(
         id,
         content: _controller.text,
-        title: firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine,
+        title: sheet?.customTitle == true
+            ? null
+            : (firstLine.length > 34 ? firstLine.substring(0, 34) : firstLine),
       );
     });
   }

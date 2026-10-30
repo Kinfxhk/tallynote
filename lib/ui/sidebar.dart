@@ -64,8 +64,10 @@ class _SidebarState extends State<Sidebar> {
                   tooltip: 'Collapse sidebar  ⌘\\',
                   iconSize: 18,
                   onPressed: widget.onClose,
-                  icon: Icon(Icons.keyboard_double_arrow_left,
-                      color: Palette.faint(_dark)),
+                  icon: Icon(
+                    Icons.keyboard_double_arrow_left,
+                    color: Palette.faint(_dark),
+                  ),
                 ),
               ],
             ),
@@ -80,12 +82,19 @@ class _SidebarState extends State<Sidebar> {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'Search sheets',
-                hintStyle:
-                    TextStyle(fontSize: 12.5, color: Palette.faint(_dark)),
-                prefixIcon: Icon(Icons.search,
-                    size: 15, color: Palette.faint(_dark)),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 26, minHeight: 20),
+                hintStyle: TextStyle(
+                  fontSize: 12.5,
+                  color: Palette.faint(_dark),
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 15,
+                  color: Palette.faint(_dark),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 26,
+                  minHeight: 20,
+                ),
                 border: InputBorder.none,
               ),
             ),
@@ -115,11 +124,15 @@ class _SidebarState extends State<Sidebar> {
           ),
           Divider(height: 1, color: Palette.hairline(_dark)),
           _action(
-              icon: Icons.add, label: 'New sheet', onTap: () => _store.create()),
+            icon: Icons.add,
+            label: 'New sheet',
+            onTap: () => _store.create(),
+          ),
           _action(
-              icon: Icons.create_new_folder_outlined,
-              label: 'New folder',
-              onTap: _newFolder),
+            icon: Icons.create_new_folder_outlined,
+            label: 'New folder',
+            onTap: _newFolder,
+          ),
           const SizedBox(height: 6),
         ],
       ),
@@ -129,10 +142,12 @@ class _SidebarState extends State<Sidebar> {
   // ---- rows ----------------------------------------------------------------
 
   Widget _note(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
-        child: Text(text,
-            style: TextStyle(fontSize: 12, color: Palette.faint(_dark))),
-      );
+    padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: 12, color: Palette.faint(_dark)),
+    ),
+  );
 
   Widget _folderRow(Folder f) {
     final open = !_collapsed.contains(f.id);
@@ -150,8 +165,11 @@ class _SidebarState extends State<Sidebar> {
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: Row(
           children: [
-            Icon(open ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
-                size: 16, color: Palette.faint(_dark)),
+            Icon(
+              open ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+              size: 16,
+              color: Palette.faint(_dark),
+            ),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -165,8 +183,10 @@ class _SidebarState extends State<Sidebar> {
                 ),
               ),
             ),
-            Text('$count',
-                style: TextStyle(fontSize: 11, color: Palette.faint(_dark))),
+            Text(
+              '$count',
+              style: TextStyle(fontSize: 11, color: Palette.faint(_dark)),
+            ),
           ],
         ),
       ),
@@ -181,21 +201,27 @@ class _SidebarState extends State<Sidebar> {
         child: Row(
           children: [
             Icon(
-                _unfiledOpen
-                    ? Icons.keyboard_arrow_down
-                    : Icons.keyboard_arrow_right,
-                size: 16,
-                color: Palette.faint(_dark)),
+              _unfiledOpen
+                  ? Icons.keyboard_arrow_down
+                  : Icons.keyboard_arrow_right,
+              size: 16,
+              color: Palette.faint(_dark),
+            ),
             const SizedBox(width: 4),
             Expanded(
-              child: Text('Unfiled',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Palette.fg(_dark).withValues(alpha: 0.85))),
+              child: Text(
+                'Unfiled',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Palette.fg(_dark).withValues(alpha: 0.85),
+                ),
+              ),
             ),
-            Text('$count',
-                style: TextStyle(fontSize: 11, color: Palette.faint(_dark))),
+            Text(
+              '$count',
+              style: TextStyle(fontSize: 11, color: Palette.faint(_dark)),
+            ),
           ],
         ),
       ),
@@ -228,21 +254,40 @@ class _SidebarState extends State<Sidebar> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    s.title.isEmpty ? 'Untitled' : s.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: selected
-                          ? Palette.fg(_dark)
-                          : Palette.fg(_dark).withValues(alpha: 0.75),
-                    ),
+                  Row(
+                    children: [
+                      if (s.pinned)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Icon(
+                            Icons.push_pin,
+                            size: 11,
+                            color: Palette.answer(_dark),
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          s.title.isEmpty ? 'Untitled' : s.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: selected
+                                ? Palette.fg(_dark)
+                                : Palette.fg(_dark).withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (folder != null)
-                    Text(folder.name,
-                        style: TextStyle(
-                            fontSize: 10.5, color: Palette.faint(_dark))),
+                    Text(
+                      folder.name,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: Palette.faint(_dark),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -250,8 +295,11 @@ class _SidebarState extends State<Sidebar> {
               onTap: () => _sheetMenu(s),
               child: Padding(
                 padding: const EdgeInsets.all(5),
-                child: Icon(Icons.more_horiz,
-                    size: 15, color: Palette.faint(_dark)),
+                child: Icon(
+                  Icons.more_horiz,
+                  size: 15,
+                  color: Palette.faint(_dark),
+                ),
               ),
             ),
           ],
@@ -273,8 +321,10 @@ class _SidebarState extends State<Sidebar> {
           children: [
             Icon(icon, size: 16, color: Palette.faint(_dark)),
             const SizedBox(width: 8),
-            Text(label,
-                style: TextStyle(fontSize: 13, color: Palette.faint(_dark))),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Palette.faint(_dark)),
+            ),
           ],
         ),
       ),
@@ -296,11 +346,16 @@ class _SidebarState extends State<Sidebar> {
       context: context,
       backgroundColor: Palette.bg(_dark),
       builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _menuRow('Rename folder', () => Navigator.pop(ctx, 'rename')),
-          _menuRow('Delete folder (sheets stay)',
-              () => Navigator.pop(ctx, 'delete')),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _menuRow('Rename folder', () => Navigator.pop(ctx, 'rename')),
+            _menuRow(
+              'Delete folder (sheets stay)',
+              () => Navigator.pop(ctx, 'delete'),
+            ),
+          ],
+        ),
       ),
     );
     if (action == 'rename') {
@@ -323,13 +378,22 @@ class _SidebarState extends State<Sidebar> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-              child: Text('Move to',
-                  style: TextStyle(
-                      fontSize: 11,
-                      letterSpacing: 0.5,
-                      fontWeight: FontWeight.w600,
-                      color: Palette.faint(_dark))),
+              child: Text(
+                s.title.isEmpty ? 'Sheet' : s.title,
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 0.5,
+                  fontWeight: FontWeight.w600,
+                  color: Palette.faint(_dark),
+                ),
+              ),
             ),
+            _menuRow('Rename…', () => Navigator.pop(ctx, 'rename')),
+            _menuRow(
+              s.pinned ? 'Unpin' : 'Pin to top',
+              () => Navigator.pop(ctx, 'pin'),
+            ),
+            const Divider(height: 12),
             _menuRow('Unfiled', () => Navigator.pop(ctx, 'none')),
             for (final f in _store.folders)
               _menuRow(f.name, () => Navigator.pop(ctx, f.id)),
@@ -340,7 +404,16 @@ class _SidebarState extends State<Sidebar> {
       ),
     );
     if (action == null) return;
-    if (action == 'delete') {
+    if (action == 'rename') {
+      final name = await _prompt(
+        'Rename sheet',
+        'Name',
+        initial: s.title.isEmpty ? 'Untitled' : s.title,
+      );
+      if (name != null) _store.rename(s.id, name);
+    } else if (action == 'pin') {
+      _store.togglePin(s.id);
+    } else if (action == 'delete') {
       _store.delete(s.id);
     } else {
       _store.moveSheet(s.id, action == 'none' ? null : action);
@@ -348,13 +421,15 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Widget _menuRow(String label, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Text(label,
-              style: TextStyle(fontSize: 14, color: Palette.fg(_dark))),
-        ),
-      );
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 14, color: Palette.fg(_dark)),
+      ),
+    ),
+  );
 
   Future<String?> _prompt(String title, String hint, {String? initial}) async {
     final c = TextEditingController(text: initial ?? '');
@@ -362,8 +437,10 @@ class _SidebarState extends State<Sidebar> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Palette.bg(_dark),
-        title: Text(title,
-            style: TextStyle(fontSize: 15, color: Palette.fg(_dark))),
+        title: Text(
+          title,
+          style: TextStyle(fontSize: 15, color: Palette.fg(_dark)),
+        ),
         content: TextField(
           controller: c,
           autofocus: true,
@@ -374,13 +451,14 @@ class _SidebarState extends State<Sidebar> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: TextStyle(color: Palette.faint(_dark))),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Palette.faint(_dark)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, c.text),
-            child:
-                Text('OK', style: TextStyle(color: Palette.answer(_dark))),
+            child: Text('OK', style: TextStyle(color: Palette.answer(_dark))),
           ),
         ],
       ),

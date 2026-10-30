@@ -21,12 +21,18 @@ class Sheet {
   String content;
   String? folderId;
   DateTime updated;
+  bool pinned;
+
+  /// Once the user renames a sheet, the first line must stop overwriting it.
+  bool customTitle;
 
   Sheet({
     required this.id,
     required this.title,
     required this.content,
     this.folderId,
+    this.pinned = false,
+    this.customTitle = false,
     DateTime? updated,
   }) : updated = updated ?? DateTime.now();
 
@@ -35,6 +41,8 @@ class Sheet {
     'title': title,
     'content': content,
     'folderId': folderId,
+    'pinned': pinned,
+    'customTitle': customTitle,
     'updated': updated.toIso8601String(),
   };
 
@@ -43,6 +51,8 @@ class Sheet {
     title: j['title'] as String? ?? 'Untitled',
     content: j['content'] as String? ?? '',
     folderId: j['folderId'] as String?,
+    pinned: j['pinned'] as bool? ?? false,
+    customTitle: j['customTitle'] as bool? ?? false,
     updated: DateTime.tryParse(j['updated'] as String? ?? ''),
   );
 }
@@ -66,8 +76,14 @@ class DocumentStore extends ChangeNotifier {
   /// Newest first, optionally filtered to one folder (null = unfiled).
   List<Sheet> inFolder(String? folderId) {
     final list = sheets.where((s) => s.folderId == folderId).toList()
-      ..sort((a, b) => b.updated.compareTo(a.updated));
+      ..sort(_order);
     return list;
+  }
+
+  /// Pinned first, then most recently edited.
+  static int _order(Sheet a, Sheet b) {
+    if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
+    return b.updated.compareTo(a.updated);
   }
 
   /// Case-insensitive title/content search across every folder.
@@ -75,15 +91,18 @@ class DocumentStore extends ChangeNotifier {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return const [];
     return sheets
-        .where((s) =>
-            s.title.toLowerCase().contains(q) ||
-            s.content.toLowerCase().contains(q))
+        .where(
+          (s) =>
+              s.title.toLowerCase().contains(q) ||
+              s.content.toLowerCase().contains(q),
+        )
         .toList()
-      ..sort((a, b) => b.updated.compareTo(a.updated));
+      ..sort(_order);
   }
 
-  Folder? folderOf(Sheet s) =>
-      s.folderId == null ? null : folders.where((f) => f.id == s.folderId).firstOrNull;
+  Folder? folderOf(Sheet s) => s.folderId == null
+      ? null
+      : folders.where((f) => f.id == s.folderId).firstOrNull;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -95,20 +114,24 @@ class DocumentStore extends ChangeNotifier {
           // v1: a bare list of sheets, no folders
           sheets
             ..clear()
-            ..addAll(decoded.map((e) => Sheet.fromJson(e as Map<String, dynamic>)));
+            ..addAll(
+              decoded.map((e) => Sheet.fromJson(e as Map<String, dynamic>)),
+            );
         } else if (decoded is Map) {
           final m = decoded as Map<String, dynamic>;
           folders
             ..clear()
             ..addAll(
-              (m['folders'] as List? ?? [])
-                  .map((e) => Folder.fromJson(e as Map<String, dynamic>)),
+              (m['folders'] as List? ?? []).map(
+                (e) => Folder.fromJson(e as Map<String, dynamic>),
+              ),
             );
           sheets
             ..clear()
             ..addAll(
-              (m['sheets'] as List? ?? [])
-                  .map((e) => Sheet.fromJson(e as Map<String, dynamic>)),
+              (m['sheets'] as List? ?? []).map(
+                (e) => Sheet.fromJson(e as Map<String, dynamic>),
+              ),
             );
         }
       } catch (_) {
@@ -172,6 +195,26 @@ class DocumentStore extends ChangeNotifier {
     _persist();
   }
 
+  /// A user-chosen name, which stops the first line from renaming the sheet.
+  void rename(String id, String title) {
+    final s = sheets.where((e) => e.id == id).firstOrNull;
+    final t = title.trim();
+    if (s == null || t.isEmpty) return;
+    s.title = t;
+    s.customTitle = true;
+    s.updated = DateTime.now();
+    notifyListeners();
+    _persist();
+  }
+
+  void togglePin(String id) {
+    final s = sheets.where((e) => e.id == id).firstOrNull;
+    if (s == null) return;
+    s.pinned = !s.pinned;
+    notifyListeners();
+    _persist();
+  }
+
   void update(String id, {String? title, String? content}) {
     final s = sheets.where((e) => e.id == id).firstOrNull;
     if (s == null) return;
@@ -185,7 +228,10 @@ class DocumentStore extends ChangeNotifier {
   // ---- folders -------------------------------------------------------------
 
   Folder createFolder(String name) {
-    final f = Folder(id: _newId(), name: name.trim().isEmpty ? 'Folder' : name.trim());
+    final f = Folder(
+      id: _newId(),
+      name: name.trim().isEmpty ? 'Folder' : name.trim(),
+    );
     folders.add(f);
     notifyListeners();
     _persist();

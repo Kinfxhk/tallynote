@@ -56,6 +56,27 @@ void main() {
     expect(store.inFolder(null).map((x) => x.id), contains(s.id));
   });
 
+  test('pinned sheets sort first, rename sticks', () async {
+    final store = DocumentStore();
+    await store.load();
+    final a = store.create();
+    store.update(a.id, title: 'Older', content: '1');
+    final b = store.create();
+    store.update(b.id, title: 'Newer', content: '2');
+
+    expect(store.inFolder(null).first.id, b.id);
+    store.togglePin(a.id);
+    expect(store.inFolder(null).first.id, a.id);
+
+    store.rename(a.id, 'Budget 2027');
+    final again = DocumentStore();
+    await again.load();
+    final reloaded = again.sheets.firstWhere((x) => x.id == a.id);
+    expect(reloaded.title, 'Budget 2027');
+    expect(reloaded.customTitle, isTrue);
+    expect(reloaded.pinned, isTrue);
+  });
+
   test('search matches title and body', () async {
     final store = DocumentStore();
     await store.load();
