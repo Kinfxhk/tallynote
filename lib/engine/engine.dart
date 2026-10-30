@@ -917,19 +917,17 @@ class SheetEngine {
     return const ErrorValue('unknown aggregate');
   }
 
+  /// One number the way the lexer would read it. A grouping mark that is not
+  /// exactly three digits (`1,23` in US, `1.23` in EU) is not rewritten into
+  /// a different integer.
   Value? _loneNumber(String s) {
-    final dec = RegExp.escape(format.decimal);
-    final group = format.group.isEmpty
-        ? '\\d+'
-        : '\\d(?:\\d|${RegExp.escape(format.group)})*';
-    final m = RegExp('-?$group(?:$dec\\d+)?').allMatches(s).toList();
-    if (m.length == 1) {
-      var raw = m.first.group(0)!;
-      if (format.group.isNotEmpty) raw = raw.replaceAll(format.group, '');
-      raw = raw.replaceAll(format.decimal, '.');
-      final v = double.tryParse(raw);
-      if (v != null) return NumValue(v);
-    }
-    return null;
+    final numbers = Lexer(
+      s,
+      format: format,
+    ).tokenize().where((t) => t.type == TokType.number).toList();
+    if (numbers.length != 1) return null;
+    final v = numbers.single.num;
+    if (v == null) return null;
+    return NumValue(v);
   }
 }

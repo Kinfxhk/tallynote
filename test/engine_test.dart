@@ -43,6 +43,15 @@ void main() {
     expect(eu.evaluate(['min(1,2)']).first.display, '1');
     expect(eu.evaluate(['pow(2,8)']).first.display, '256');
     expect(eu.evaluate(['root(8,3)']).first.display, '2');
+    // Grouping parentheses still use the decimal comma.
+    expect(
+      (eu.evaluate(['(1,5)']).first.value as NumValue).value,
+      closeTo(1.5, 1e-9),
+    );
+    expect(
+      (eu.evaluate(['(1,5)+2']).first.value as NumValue).value,
+      closeTo(3.5, 1e-9),
+    );
     expect(
       (eu.evaluate(['1,5']).first.value as NumValue).value,
       closeTo(1.5, 1e-9),
@@ -52,6 +61,10 @@ void main() {
     expect(half.engineError, isFalse);
     expect((half.value as NumValue).value, closeTo(1.5, 1e-9));
     expect(half.display, '1,5');
+    // A grouped number the lexer rejects must not become a different integer.
+    expect(engine.evaluate(['1,23 +']).first.display, isNull);
+    expect(eu.evaluate(['1.23 +']).first.display, isNull);
+    expect((engine.evaluate(['1,234 +']).first.value as NumValue).value, 1234);
 
     final cny = SheetEngine(format: NumberFormat.us.withYen('CNY'));
     final yuan = cny.evaluate(['¥100']).first;

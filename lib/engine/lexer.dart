@@ -81,7 +81,10 @@ class Lexer {
   final String src;
   final NumberFormat format;
   int _i = 0;
-  int _parenDepth = 0;
+
+  /// True when the paren at that depth was opened right after an identifier
+  /// (`min(`), false for grouping (`(1,5)`).
+  final List<bool> _parenIsCall = [];
   final List<Token> out = [];
 
   Lexer(String source, {this.format = NumberFormat.us})
@@ -127,12 +130,13 @@ class Lexer {
         continue;
       }
       if (c == '(') {
-        _parenDepth++;
+        final prev = out.isEmpty ? null : out.last;
+        _parenIsCall.add(prev != null && prev.type == TokType.word);
         out.add(Token(TokType.lparen, '(', _i++));
         continue;
       }
       if (c == ')') {
-        if (_parenDepth > 0) _parenDepth--;
+        if (_parenIsCall.isNotEmpty) _parenIsCall.removeLast();
         out.add(Token(TokType.rparen, ')', _i++));
         continue;
       }
@@ -202,11 +206,13 @@ class Lexer {
     return true;
   }
 
-  /// Inside `min(1,2)` the comma separates arguments. In EU format that same
-  /// character is the decimal mark, but only outside a call: `1,5` is 1.5,
-  /// while `min(1,5)` is still min of 1 and 5.
+  /// A comma separates arguments only inside a call (`min(1,2)`). Grouping
+  /// parentheses keep the EU decimal: `(1,5)` is 1.5, and so is a bare `1,5`.
   bool _decimalIsArgumentSeparator(String c) =>
-      c == ',' && format.decimal == ',' && _parenDepth > 0;
+      c == ',' &&
+      format.decimal == ',' &&
+      _parenIsCall.isNotEmpty &&
+      _parenIsCall.last;
 
   /// A grouping mark only counts when it is followed by exactly three digits
   /// and then a boundary (`1.234` is a thousand, `1.2345` is not).
