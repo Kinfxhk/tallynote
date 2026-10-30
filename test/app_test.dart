@@ -28,7 +28,7 @@ void main() {
     await tester.enterText(editor, '2+3*4');
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('14'), findsOneWidget);
+    expect(find.textContaining('14'), findsOneWidget);
   });
 
   testWidgets('variables and sum work through the UI', (tester) async {
@@ -40,8 +40,8 @@ void main() {
     await tester.enterText(editor, 'rent = 2500\nfood = 400\nsum');
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('2,500'), findsOneWidget);
-    expect(find.text('2,900'), findsOneWidget);
+    expect(find.textContaining('2,500'), findsOneWidget);
+    expect(find.textContaining('2,900'), findsOneWidget);
   });
 
   testWidgets('sidebar collapses and comes back', (tester) async {
@@ -65,17 +65,37 @@ void main() {
     );
     await tester.enterText(editor, '(1+2)*3');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('9'), findsOneWidget);
+    expect(find.textContaining('9'), findsOneWidget);
 
     final plus = find.descendant(
       of: find.byType(EditorView),
-      matching: find.byIcon(Icons.add),
+      matching: find.byIcon(Icons.chevron_right),
     );
     expect(plus, findsOneWidget);
     await tester.tap(plus);
     await tester.pumpAndSettle();
     expect(find.text('Steps'), findsOneWidget);
     expect(find.textContaining('1 + 2 = 3'), findsOneWidget);
+  });
+
+  testWidgets('decimal points line up in the answer column', (tester) async {
+    await boot(tester);
+    final editor = find.descendant(
+      of: find.byType(EditorView),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(editor, '2000+3000\n9.5*3\n1234.5*2');
+    await tester.pump(const Duration(milliseconds: 60));
+
+    // only 28.5 draws a point; integers stop at the same column
+    final dot = find.text('.');
+    expect(dot, findsOneWidget);
+    final dotX = tester.getTopLeft(dot).dx;
+
+    for (final head in ['5,000', '28', '2,469']) {
+      expect(tester.getTopRight(find.text(head)).dx, closeTo(dotX, 0.6),
+          reason: 'head $head should end at the decimal column');
+    }
   });
 
   testWidgets('answers can be hidden from settings', (tester) async {
@@ -86,7 +106,7 @@ void main() {
     );
     await tester.enterText(editor, '2+3*4');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(find.text('14'), findsOneWidget);
+    expect(find.textContaining('14'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Settings').first);
     await tester.pumpAndSettle();
@@ -94,6 +114,6 @@ void main() {
 
     await tester.tap(find.text('Answers'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(find.text('14'), findsNothing);
+    expect(find.textContaining('14'), findsNothing);
   });
 }

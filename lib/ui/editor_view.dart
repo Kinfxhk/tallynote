@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
@@ -59,12 +61,14 @@ class _EditorViewState extends State<EditorView> {
   @override
   Widget build(BuildContext context) {
     final style = editorStyle(widget.dark);
-    final answerW = widget.answersVisible ? 150.0 : 0.0;
+    const stepGutter = 16.0;
+    final answerW = widget.answersVisible ? 196.0 : 0.0;
 
     return LayoutBuilder(builder: (context, constraints) {
       final text = widget.controller.text;
       final textWidth = constraints.maxWidth - answerW - 48;
       final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
+      final metrics = _columnMetrics(widget.results);
 
       return SingleChildScrollView(
         controller: _scroll,
@@ -107,27 +111,32 @@ class _EditorViewState extends State<EditorView> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Flexible(
-                          child: IgnorePointer(
-                            child: Text(
-                              widget.results[i].display!,
-                              textAlign: TextAlign.right,
+                        // the step marker lives in its own gutter so numbers
+                        // never move because of it
+                        SizedBox(
+                          width: stepGutter,
+                          child: (widget.showSteps &&
+                                  widget.explain != null &&
+                                  _hasOperators(widget.results[i].text))
+                              ? _StepButton(
+                                  dark: widget.dark,
+                                  onTap: () =>
+                                      _openSteps(widget.results[i].text),
+                                )
+                              : null,
+                        ),
+                        IgnorePointer(
+                          child: _AnswerCell(
+                              display: widget.results[i].display!,
                               style: answerStyle(widget.dark).copyWith(
                                 color: widget.results[i].error != null
                                     ? Palette.answer(widget.dark)
                                         .withValues(alpha: 0.6)
                                     : null,
                               ),
-                            ),
+                            metrics: metrics,
                           ),
                         ),
-                        if (widget.showSteps &&
-                            widget.explain != null &&
-                            _hasOperators(widget.results[i].text))
-                          _StepButton(
-                            dark: widget.dark,
-                            onTap: () => _openSteps(widget.results[i].text),
-                          ),
                       ],
                     ),
                   ),
@@ -136,6 +145,37 @@ class _EditorViewState extends State<EditorView> {
       );
     });
   }
+
+  /// Character counts needed to line the decimal points up. Widths are exact
+  /// because the answer style is monospace with tabular figures.
+  _ColumnMetrics _columnMetrics(List<LineResult> results) {
+    var maxHead = 0;
+    var maxFrac = 0;
+    for (final r in results) {
+      final d = r.display;
+      if (d == null) continue;
+      final dot = d.lastIndexOf('.');
+      if (dot > 0 && RegExp(r'^\d+$').hasMatch(d.substring(dot + 1))) {
+        maxHead = math.max(maxHead, dot);
+        maxFrac = math.max(maxFrac, math.min(2, d.length - dot - 1));
+      } else if (_isNumericHead(d)) {
+        maxHead = math.max(maxHead, d.length);
+      }
+    }
+    return _ColumnMetrics(maxHead, maxFrac, _charWidth());
+  }
+
+  double _charWidth() {
+    final tp = TextPainter(
+      text: TextSpan(text: '0', style: answerStyle(widget.dark)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp.width;
+  }
+
+  static bool _isNumericHead(String s) =>
+      RegExp(r'[\d]').hasMatch(s) &&
+      !RegExp(r'[A-Za-z\u4e00-\u9fff]').hasMatch(s);
 
   /// Mirrors SheetEngine.explain: two or more operations is "complex".
   static bool _hasOperators(String line) =>
@@ -234,8 +274,77 @@ class _StepButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.only(left: 6),
-        child: Icon(Icons.add, size: 13, color: Palette.faint(dark)),
+        padding: const EdgeInsets.only(right: 4),
+        child: Icon(Icons.chevron_right, size: 14, color: Palette.faint(dark)),
+      ),
+    );
+  }
+}
+
+class _ColumnMetrics {
+  final int maxHead;
+  final int maxFrac;
+  final double charW;
+  const _ColumnMetrics(this.maxHead, this.maxFrac, this.charW);
+
+  double get headW => charW * maxHead;
+  double get totalW => charW * (maxHead + 1 + maxFrac);
+}
+
+class _AnswerCell extends StatelessWidget {
+  final String display;
+  final TextStyle style;
+  final _ColumnMetrics metrics;
+
+  const _AnswerCell({
+    required this.display,
+    required this.style,
+    required this.metrics,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dot = display.lastIndexOf('.');
+    final hasFrac = dot > 0 &&
+        display.length - dot - 1 <= metrics.maxFrac &&
+        RegExp(r'^\d+$').hasMatch(display.substring(dot + 1));
+    // plain integers belong in the grid too: their decimal point is implied
+    final isInteger =
+        dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
+    if (!hasFrac && !isInteger) {
+      return SizedBox(
+        width: metrics.totalW,
+        child: Text(display,
+            textAlign: TextAlign.right, maxLines: 1, softWrap: false, style: style),
+      );
+    }
+
+    final head = hasFrac ? display.substring(0, dot) : display;
+    final frac = hasFrac ? display.substring(dot + 1) : '';
+    return SizedBox(
+      width: metrics.totalW,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          SizedBox(
+            width: metrics.headW,
+            child: Text(head,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                softWrap: false,
+                style: style),
+          ),
+          SizedBox(
+            width: metrics.charW,
+            // integers get a blank here so their digits end at the decimal
+            // column instead of growing a stray dot
+            child: Text(hasFrac ? '.' : '', style: style),
+          ),
+          SizedBox(
+            width: metrics.charW * metrics.maxFrac,
+            child: Text(frac, style: style),
+          ),
+        ],
       ),
     );
   }
