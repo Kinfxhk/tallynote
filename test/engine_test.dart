@@ -81,6 +81,24 @@ void main() {
     expect(s3[2].display, r'$30');
   });
 
+  test('balance sheet: section subtotals then a grand total', () {
+    final r = engine.evaluate([
+      '# 資產',
+      '現金 500000',
+      '股票 300000',
+      'sum',
+      '# 負債',
+      '貸款 -500000',
+      '卡數 -20000',
+      'sum',
+      '合共',
+    ]);
+    expect(r[3].display, '800,000');
+    expect(r[7].display, '-520,000');
+    // leaves only: the two subtotals are not counted a second time
+    expect(r[8].display, '280,000');
+  });
+
   test('grand total groups by unit instead of faking one number', () {
     final r = engine.evaluate(['5 kg', '3 lb', '2 m', '總計']);
     expect(r[3].display, '6.36077711 kg, 2 m');

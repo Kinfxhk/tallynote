@@ -134,6 +134,9 @@ class SheetEngine {
     final results = <LineResult>[];
     final vars = <String, Value>{};
     final values = <Value?>[];
+    // answers that are not themselves totals, aligned with `values`.
+    // A total must never count a subtotal on top of the lines it covers.
+    final leafAt = <Value?>[];
     var sectionStart = 0;
 
     for (var i = 0; i < lines.length; i++) {
@@ -144,6 +147,7 @@ class SheetEngine {
       if (trimmed.isEmpty) {
         results.add(LineResult(text: raw));
         values.add(null);
+        leafAt.add(null);
         sectionStart = i + 1;
         continue;
       }
@@ -154,6 +158,7 @@ class SheetEngine {
           isHeading: trimmed.startsWith('# '),
         ));
         values.add(null);
+        leafAt.add(null);
         if (trimmed.startsWith('# ')) sectionStart = i + 1;
         continue;
       }
@@ -176,8 +181,10 @@ class SheetEngine {
           current: i,
           tag: tag,
           tags: tags,
+          leafAt: leafAt,
         );
         values.add(value);
+        leafAt.add(value is ErrorValue || _isAggregateLine(body) ? null : value);
         if (collect && tag != null && value != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(value);
         }
@@ -193,6 +200,7 @@ class SheetEngine {
         // "午餐 120" is prose with a number in it: show the number.
         final fallback = _loneNumber(body);
         values.add(fallback);
+        leafAt.add(fallback);
         if (collect && tag != null && fallback != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
         }
@@ -205,6 +213,7 @@ class SheetEngine {
       } catch (e) {
         final fallback = _loneNumber(body);
         values.add(fallback);
+        leafAt.add(fallback);
         if (collect && tag != null && fallback != null) {
           tags.putIfAbsent(tag.toLowerCase(), () => []).add(fallback);
         }
@@ -221,6 +230,17 @@ class SheetEngine {
   }
 
   // a line starting with '#' is a comment or heading; tags only count at the end
+  static const _aggWords = {
+    'sum', 'total', 'average', 'avg', 'count', 'min', 'max',
+  };
+
+  bool _isAggregateLine(String body) {
+    final a = body.trim().toLowerCase();
+    return _aggWords.contains(a) ||
+        _grandWords.contains(a) ||
+        RegExp(r'^(?:total|sum|subtotal)\s+of\s+#').hasMatch(a);
+  }
+
   bool _isComment(String s) => s.startsWith('#');
 
   String? _extractTag(String s) {
@@ -235,6 +255,7 @@ class SheetEngine {
     required int sectionStart,
     required int current,
     required Map<String, List<Value>> tags,
+    required List<Value?> leafAt,
     String? tag,
   }) {
     final ctx = EvalContext(
@@ -262,12 +283,12 @@ class SheetEngine {
     final agg = body.toLowerCase();
     if (const {'sum', 'total', 'average', 'avg', 'count', 'min', 'max'}
         .contains(agg)) {
-      final slice = values.sublist(sectionStart, current);
+      final slice = leafAt.sublist(sectionStart, current);
       return _aggregate(agg, slice.whereType<Value>().toList());
     }
     // grand total: every answer above this line, grouped by unit
     if (_grandWords.contains(agg)) {
-      return _grandTotal(values.sublist(0, current).whereType<Value>().toList());
+      return _grandTotal(leafAt.sublist(0, current).whereType<Value>().toList());
     }
 
     final tagged = RegExp(r'^(?:total|sum|subtotal)\s+of\s+#([\w\u4e00-\u9fff]+)$')

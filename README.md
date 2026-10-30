@@ -24,6 +24,25 @@ today + 2 weeks                →  13 November 2026
 
 ![Tallynote on Android](docs/android.png)
 
+Balance sheets work the same way — a `sum` per section, then one total:
+
+```
+# Assets
+cash 500,000                 →  500,000
+stocks 300,000               →  300,000
+sum                          →  800,000
+
+# Liabilities
+mortgage -500,000            →  -500,000
+cards -20,000                →  -20,000
+sum                          →  -520,000
+
+合共                          →  280,000
+```
+
+The grand total only counts individual lines, never the subtotals above it, so
+nothing is counted twice.
+
 ## What it does
 
 - **Line-by-line answers** — every line is evaluated independently; errors stay on their own line and never break the sheet.
