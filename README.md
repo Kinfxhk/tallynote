@@ -6,6 +6,8 @@ Offline first: nothing is computed in the cloud, and the page works with the net
 
 **[Open the web app](https://kinfxhk.github.io/tallynote/)** · **[All downloads](https://github.com/Kinfxhk/tallynote/releases/latest)**
 
+Support: **[Buy Me a Coffee](https://buymeacoffee.com/kinfxhk)**
+
 | Platform | Download | Status |
 |---|---|---|
 | Android | `app-release.apk` | built and run on a device |
@@ -89,27 +91,6 @@ sum                          →  -520,000
 
 - When a line is ambiguous the app shows nothing rather than a guess (an uppercase `X` is not a times sign)
 
-## How it compares
-
-Honest notes: Soulver has integrations this project deliberately does not (Wolfram|Alpha, stocks, weather); Numi's prose parsing is far more mature. Tallynote's edge is being free, open source, offline, and on five surfaces at once.
-
-| | **Tallynote** | Soulver 4 | Numi 3 | Notepad Calculator |
-|---|---|---|---|---|
-| Platforms | macOS, Windows, Linux, Android, Web | macOS, iPad, iPhone | macOS, Windows | Web |
-| Price | Free (MIT) | $59 one-time | Freemium, ~$20–30 | Free |
-| Open source | ✅ MIT | ❌ | ✅ source on GitHub | ✅ |
-| Works offline | ✅ built-in rates + cache | ✅ except live data | ✅ | ⚠️ needs a server |
-| Natural-language maths | ✅ plus Chinese operators (乘/除/加/減) | ✅ best in class | ✅ | ✅ |
-| Units & currency | ✅ ~150 units, daily ECB rates | ✅ 180+ units, live prices | ✅ | ✅ basic |
-| Variables & line references | ✅ | ✅ | ✅ | ✅ |
-| Dates & time zones | ✅ | ✅ | ✅ | ⚠️ limited |
-| Section subtotals & tags | ✅ `sum`, `total of #tag` | ✅ | ⚠️ `sum` only | ❌ |
-| Whole-sheet grand total | ✅ unit-aware | ✅ | ⚠️ | ❌ |
-| Step-by-step breakdown | ✅ | ❌ | ❌ | ❌ |
-| Inline bold / italic / colour | ✅ markers | ✅ rich text | ⚠️ limited | ❌ |
-| CLI / scripting | ❌ | ✅ | ✅ numi-cli | ❌ |
-| Wolfram, stocks, weather | ❌ by design | ✅ | ⚠️ | ❌ |
-
 ## From the command line
 
 The engine is pure Dart, so it also compiles to a single binary — handy for
@@ -156,4 +137,4 @@ flutter build windows --release
 
 ## License
 
-MIT. The notepad-calculator idea belongs to [Soulver](https://soulver.app) and [Numi](https://numi.app); Tallynote is an independent implementation that borrows the idea, not the code.
+MIT. Tallynote is an independent implementation of the notepad-calculator idea, and is not affiliated with any commercial notepad calculator.
