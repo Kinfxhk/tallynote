@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../engine/engine.dart';
 import '../i18n/strings.dart';
 import '../engine/values.dart';
+import 'answer_column.dart';
 import 'feedback.dart';
 import 'theme.dart';
 
@@ -13,6 +12,8 @@ import 'theme.dart';
 ///
 /// Answers are positioned with a TextPainter over the same text/style/width,
 /// so soft-wrapped lines still line up without a per-line widget tree.
+/// The answer column itself is measured in pixels ([AnswerReadout]) so the
+/// decimal points share one x even when a glyph is not one digit wide.
 class EditorView extends StatefulWidget {
   final TextEditingController controller;
   final List<LineResult> results;
@@ -106,7 +107,16 @@ class _EditorViewState extends State<EditorView> {
         final text = widget.controller.text;
         final textWidth = constraints.maxWidth - answerW - gutterW - 48;
         final tops = _lineTops(text, style, textWidth < 80 ? 80 : textWidth);
-        final metrics = _columnMetrics(widget.results);
+        // Text merges the ambient style at paint time. Measure that same
+        // face, or a theme letter-spacing shows up only in the glyphs and
+        // the row overflows by a fraction of a character.
+        final painted = DefaultTextStyle.of(context).style
+            .merge(answerStyle(widget.dark, scale: widget.scale));
+        final metrics = measureAnswers(
+          widget.results.map((r) => r.display).whereType<String>(),
+          (s) =>
+              measureAnswerText(s, painted, MediaQuery.textScalerOf(context)),
+        );
 
         return DragTarget<int>(
           onAcceptWithDetails: (d) =>
@@ -216,41 +226,11 @@ class _EditorViewState extends State<EditorView> {
     );
   }
 
-  /// Character counts needed to line the decimal points up. Widths are exact
-  /// because the answer style is monospace with tabular figures.
-  _ColumnMetrics _columnMetrics(List<LineResult> results) {
-    var maxHead = 0;
-    var maxFrac = 0;
-    for (final r in results) {
-      final d = r.display;
-      if (d == null) continue;
-      final dot = d.lastIndexOf('.');
-      if (dot > 0 && RegExp(r'^\d+$').hasMatch(d.substring(dot + 1))) {
-        maxHead = math.max(maxHead, dot);
-        maxFrac = math.max(maxFrac, math.min(2, d.length - dot - 1));
-      } else if (_isNumericHead(d)) {
-        maxHead = math.max(maxHead, d.length);
-      }
-    }
-    final charW = _charWidth();
-    return _ColumnMetrics(maxHead, maxFrac, charW);
-  }
-
-  double _charWidth() {
-    final tp = TextPainter(
-      text: TextSpan(text: '0', style: answerStyle(widget.dark)),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    return tp.width;
-  }
-
-  static bool _isNumericHead(String s) =>
-      RegExp(r'[\d]').hasMatch(s) &&
-      !RegExp(r'[A-Za-z\u4e00-\u9fff]').hasMatch(s);
-
   /// Mirrors SheetEngine.explain: two or more operations is "complex".
+  /// Fullwidth operators count too; the engine folds them before parsing,
+  /// but the raw line still has the glyphs the user typed.
   static bool _hasOperators(String line) =>
-      RegExp(r'[+\-*/^%×÷]|乘|除|加|減|减').allMatches(line).length >= 2;
+      RegExp(r'[+\-*/^%×÷＋－＊／％]|乘|除|加|減|减').allMatches(line).length >= 2;
 
   Widget _foldArrow(int visibleIndex) {
     final original = visibleIndex < widget.lineMap.length
@@ -272,17 +252,16 @@ class _EditorViewState extends State<EditorView> {
   }
 
   /// One answer cell, with drag-to-reference when the sheet supports it.
-  Widget _cell(int i, _ColumnMetrics metrics) {
+  Widget _cell(int i, AnswerColumnMetrics metrics) {
     final r = widget.results[i];
-    final style = answerStyle(
-      widget.dark,
-      scale: widget.scale,
-    ).copyWith(color: _answerColour(r));
+    final painted = DefaultTextStyle.of(context).style
+        .merge(answerStyle(widget.dark, scale: widget.scale));
+    final style = painted.copyWith(color: _answerColour(r) ?? painted.color);
     final cell = _tapForSteps(
       line: r.text,
       canExplain:
           widget.showSteps && widget.explain != null && _hasOperators(r.text),
-      child: _AnswerCell(display: r.display!, style: style, metrics: metrics),
+      child: AnswerReadout(display: r.display!, style: style, metrics: metrics),
     );
 
     if (widget.onInsertReference == null) return cell;
@@ -475,64 +454,6 @@ class _StepButton extends StatelessWidget {
             color: Palette.faint(dark),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ColumnMetrics {
-  final int maxHead;
-  final int maxFrac;
-  final double charW;
-  const _ColumnMetrics(this.maxHead, this.maxFrac, this.charW);
-
-  double get headW => charW * maxHead;
-  double get totalW => charW * (maxHead + 1 + maxFrac);
-}
-
-class _AnswerCell extends StatelessWidget {
-  final String display;
-  final TextStyle style;
-  final _ColumnMetrics metrics;
-
-  const _AnswerCell({
-    required this.display,
-    required this.style,
-    required this.metrics,
-  });
-
-  /// One Text, padded with non-breaking spaces, so the parts of a number can
-  /// never be laid out on different lines. NBSP is a real glyph, so it is not
-  /// trimmed the way normal trailing spaces are.
-  @override
-  Widget build(BuildContext context) {
-    const nbsp = '\u00A0';
-    final dot = display.lastIndexOf('.');
-    final hasFrac =
-        dot > 0 &&
-        display.length - dot - 1 <= metrics.maxFrac &&
-        RegExp(r'^\d+$').hasMatch(display.substring(dot + 1));
-    final isInteger = dot == -1 && RegExp(r'^[-\d,]+$').hasMatch(display);
-
-    String text = display;
-    if (hasFrac) {
-      final head = display.substring(0, dot).padLeft(metrics.maxHead, nbsp);
-      final frac = display.substring(dot + 1).padRight(metrics.maxFrac, nbsp);
-      text = '$head.$frac';
-    } else if (isInteger) {
-      text =
-          display.padLeft(metrics.maxHead, nbsp) +
-          nbsp * (metrics.maxFrac == 0 ? 0 : 1 + metrics.maxFrac);
-    }
-
-    return SizedBox(
-      width: metrics.totalW,
-      child: Text(
-        text,
-        textAlign: TextAlign.right,
-        maxLines: 1,
-        softWrap: false,
-        style: style,
       ),
     );
   }

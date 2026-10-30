@@ -12,12 +12,75 @@ class Token {
   String toString() => '${type.name}($text)';
 }
 
+/// Folds fullwidth digits and operator glyphs to ASCII so a line typed with
+/// a Chinese IME parses the same way as one typed on a US keyboard.
+///
+/// Ideographic `。` becomes a decimal point only when it sits between digits
+/// (`3。14`). The minus signs people paste (`−`, `–`, `—`, `－`) fold too,
+/// which is what the lexer already did one token at a time. `×` and `÷`
+/// stay as themselves; the parser accepts both.
+String normalizeMathSource(String src) {
+  if (src.isEmpty) return src;
+  final codes = src.runes.toList(growable: false);
+  final out = StringBuffer();
+  for (var i = 0; i < codes.length; i++) {
+    final code = codes[i];
+    final prevDigit = i > 0 && _isFoldDigit(codes[i - 1]);
+    final nextDigit = i + 1 < codes.length && _isFoldDigit(codes[i + 1]);
+    out.write(_foldRune(code, prevDigit: prevDigit, nextDigit: nextDigit));
+  }
+  return out.toString();
+}
+
+bool _isFoldDigit(int code) =>
+    (code >= 0x30 && code <= 0x39) || (code >= 0xFF10 && code <= 0xFF19);
+
+String _foldRune(int code, {required bool prevDigit, required bool nextDigit}) {
+  if (code >= 0xFF10 && code <= 0xFF19) {
+    return String.fromCharCode(0x30 + (code - 0xFF10));
+  }
+  // Fullwidth Latin. Keeps the case split so `ｘ` is multiply and `Ｘ` is not.
+  if (code >= 0xFF21 && code <= 0xFF3A) {
+    return String.fromCharCode(0x41 + (code - 0xFF21));
+  }
+  if (code >= 0xFF41 && code <= 0xFF5A) {
+    return String.fromCharCode(0x61 + (code - 0xFF41));
+  }
+  const mapped = <int, String>{
+    0xFF0B: '+', // ＋
+    0xFF0D: '-', // －
+    0x2212: '-', // −
+    0x2013: '-', // –
+    0x2014: '-', // —
+    0xFE63: '-', // ﹣
+    0xFF0A: '*', // ＊
+    0xFF0F: '/', // ／
+    0xFF05: '%', // ％
+    0xFE6A: '%', // ﹪
+    0xFF08: '(', // （
+    0xFF09: ')', // ）
+    0xFF0C: ',', // ，
+    0xFF0E: '.', // ．
+    0xFF04: r'$', // ＄
+    0xFFE5: '¥', // ￥
+    0xFFE1: '£', // ￡
+    0xFF1D: '=', // ＝
+    0xFF1A: ':', // ：
+    0xFF1B: ';', // ；
+  };
+  final hit = mapped[code];
+  if (hit != null) return hit;
+  // `3。14` — the ideographic full stop used as a decimal point.
+  if (code == 0x3002 && prevDigit && nextDigit) return '.';
+  return String.fromCharCode(code);
+}
+
 class Lexer {
   final String src;
   int _i = 0;
   final List<Token> out = [];
 
-  Lexer(this.src);
+  Lexer(String source) : src = normalizeMathSource(source);
 
   List<Token> tokenize() {
     while (_i < src.length) {

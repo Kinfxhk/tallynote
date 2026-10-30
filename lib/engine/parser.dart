@@ -182,23 +182,39 @@ class Parser {
     return true;
   }
 
+  /// Tries each phrase in order. Longer forms must come first so `除` does
+  /// not swallow the `除` of a spaced `除 以`.
+  bool _matchAnyWords(List<List<String>> options) {
+    for (final words in options) {
+      if (_matchWords(words)) return true;
+    }
+    return false;
+  }
+
   // ---- grammar -------------------------------------------------------------
 
   Node _additive() {
     var left = _multiplicative();
     while (true) {
       if (_matchOp('+') ||
-          _matchWords(['plus']) ||
-          _matchWords(['and']) ||
-          _matchWords(['加']) ||
-          _matchWords(['加上'])) {
+          _matchAnyWords(const [
+            ['plus'],
+            ['and'],
+            ['加', '上'],
+            ['加上'],
+            ['加'],
+          ])) {
         left = BinNode('+', left, _multiplicative());
       } else if (_matchOp('-') ||
-          _matchWords(['minus']) ||
-          _matchWords(['減']) ||
-          _matchWords(['減去']) ||
-          _matchWords(['减']) ||
-          _matchWords(['减去'])) {
+          _matchAnyWords(const [
+            ['minus'],
+            ['減', '去'],
+            ['减', '去'],
+            ['減去'],
+            ['减去'],
+            ['減'],
+            ['减'],
+          ])) {
         left = BinNode('-', left, _multiplicative());
       } else {
         break;
@@ -212,9 +228,12 @@ class Parser {
     while (true) {
       if (_matchOp('*') ||
           _matchOp('×') ||
-          _matchWords(['times']) ||
-          _matchWords(['乘']) ||
-          _matchWords(['乘以'])) {
+          _matchAnyWords(const [
+            ['times'],
+            ['乘', '以'],
+            ['乘以'],
+            ['乘'],
+          ])) {
         left = BinNode('*', left, _unary());
       } else if (_isLowerX()) {
         // "x" is how people type × on a keyboard
@@ -224,12 +243,17 @@ class Parser {
         left = BinNode('*', left, _unary());
       } else if (_matchOp('/') ||
           _matchOp('÷') ||
-          _matchWords(['divided', 'by']) ||
-          _matchWords(['over']) ||
-          _matchWords(['into']) ||
-          _matchWords(['per']) ||
-          _matchWords(['除']) ||
-          _matchWords(['除以'])) {
+          _matchAnyWords(const [
+            ['divided', 'by'],
+            ['over'],
+            ['into'],
+            ['per'],
+            ['除', '以'],
+            ['除', '去'],
+            ['除以'],
+            ['除去'],
+            ['除'],
+          ])) {
         left = BinNode('/', left, _unary());
       } else if (cur?.type == TokType.lparen) {
         left = BinNode('*', left, _unary()); // implicit: 2(3+4)
@@ -271,10 +295,35 @@ class Parser {
           _p = save;
           break;
         }
-        if (w == 'of' && node is PercentNode) {
+        // "5% of 200", "5%的200", "5%嘅200"
+        if ((w == 'of' || w == '的' || w == '嘅') && node is PercentNode) {
           _p++;
           node = PercentOfNode(node.operand, _unary());
           continue;
+        }
+        // "200的百分之5": the lexer glues a run of CJK, so the particle and
+        // 百分之 arrive as one word when no digit sits between them.
+        if (w == '的百分之' || w == '嘅百分之') {
+          final next = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+          if (next != null && next.type == TokType.number) {
+            _p += 2;
+            if (_isOp('%')) _p++;
+            node = PercentOfNode(NumberNode(next.num!), node);
+            continue;
+          }
+          break;
+        }
+        // "200的5%" / "200嘅百分之5" — the base comes first.
+        if (w == '的' || w == '嘅') {
+          final save = _p;
+          _p++;
+          final amount = _takePercentAmount();
+          if (amount != null) {
+            node = PercentOfNode(amount, node);
+            continue;
+          }
+          _p = save;
+          break;
         }
       }
       break;
@@ -295,9 +344,12 @@ class Parser {
       _p++;
       return Unit(code, const {'currency': 1}, 1);
     }
-    if (allowDynamic && !_reserved.contains(c.text.toLowerCase())) {
+    final key = c.text.toLowerCase();
+    // "200的百分之5" is one CJK word plus a number. It must stay a word so
+    // the percent postfix can see it, not a made-up unit named 的百分之.
+    if (allowDynamic && !_reserved.contains(key) && !key.contains('百分之')) {
       _p++;
-      return Unit(c.text, {c.text.toLowerCase(): 1}, 1);
+      return Unit(c.text, {key: 1}, 1);
     }
     return null;
   }
@@ -323,6 +375,10 @@ class Parser {
     '乘以',
     '除',
     '除以',
+    '除去',
+    '的',
+    '嘅',
+    '百分之',
     'multiplied',
     'divided',
     'over',
@@ -426,6 +482,15 @@ class Parser {
         }
       }
 
+      if (w == '百分之') {
+        final next = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+        if (next != null && next.type == TokType.number) {
+          _p += 2;
+          if (_isOp('%')) _p++;
+          return PercentNode(NumberNode(next.num!));
+        }
+      }
+
       if (_funcNames.contains(lower) || _looksLikeCall(w)) {
         return _call();
       }
@@ -454,6 +519,30 @@ class Parser {
       return PercentNode(node);
     }
     return node;
+  }
+
+  /// `5%` or `百分之5` standing where a percent amount is required.
+  /// Returns the bare number (PercentOfNode divides by 100). Null if the
+  /// following tokens are not a percent, and consumes nothing in that case
+  /// only when the caller restores the cursor — this method itself advances
+  /// only on success.
+  Node? _takePercentAmount() {
+    final c = cur;
+    if (c == null) return null;
+    if (c.type == TokType.word && c.text == '百分之') {
+      final n = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+      if (n == null || n.type != TokType.number) return null;
+      _p += 2;
+      if (_isOp('%')) _p++;
+      return NumberNode(n.num!);
+    }
+    if (c.type == TokType.number) {
+      final n = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+      if (n == null || n.type != TokType.op || n.text != '%') return null;
+      _p += 2;
+      return NumberNode(c.num!);
+    }
+    return null;
   }
 
   bool _looksLikeCall(String w) {
