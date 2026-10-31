@@ -4,7 +4,12 @@
 // Navigation is network-first so a new deploy shows immediately; everything
 // else is stale-while-revalidate so the second open is instant and the app
 // still starts with the network unplugged.
-const CACHE = 'tallynote-v3';
+//
+// The precache list must cover what a cold boot asks for before the worker
+// controls the page: Chrome loads canvaskit/chromium/*, not canvaskit/*, and
+// the app dies on the missing module (a real offline boot failed on exactly
+// that file). Bump CACHE whenever PRECACHE changes.
+const CACHE = 'tallynote-v4';
 
 // Best effort: one missing file must not fail the whole install.
 const PRECACHE = [
@@ -16,11 +21,18 @@ const PRECACHE = [
   './main.dart.js',
   './canvaskit/canvaskit.js',
   './canvaskit/canvaskit.wasm',
+  './canvaskit/chromium/canvaskit.js',
+  './canvaskit/chromium/canvaskit.wasm',
   // Flutter refuses to start without its asset manifest, so this one is not
   // optional even though a missing file is otherwise ignored.
   './assets/AssetManifest.bin.json',
   './assets/AssetManifest.json',
   './assets/FontManifest.json',
+  // The UI's own faces: a boot without them renders boxes.
+  './assets/fonts/MaterialIcons-Regular.otf',
+  './assets/fonts/fallback/Roboto-Regular.ttf',
+  './assets/packages/cupertino_icons/assets/CupertinoIcons.ttf',
+  './icons/Icon-192.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -98,13 +110,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const hit = await caches.match(request);
-      const network = fetch(request)
-        .then((response) => {
-          put(request, response.clone());
-          return response;
-        })
-        .catch(() => hit);
-      return hit || network;
+      if (hit) {
+        // Refresh in the background; the cached copy answers this time.
+        fetch(request).then((r) => put(request, r)).catch(() => {});
+        return hit;
+      }
+      // Nothing cached: let a real network error surface instead of answering
+      // with undefined, which the browser reports as a broken response.
+      const fresh = await fetch(request);
+      put(request, fresh.clone());
+      return fresh;
     })()
   );
 });
