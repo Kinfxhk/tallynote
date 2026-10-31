@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:tallynote/engine/engine.dart';
 import 'package:tallynote/engine/values.dart';
 
-const _version = '0.3.2';
+const _version = '0.3.3';
 
 const _usage = '''
 Tallynote — the notepad that adds up, from the command line.

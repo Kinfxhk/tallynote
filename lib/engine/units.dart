@@ -194,7 +194,14 @@ class UnitRegistry {
   double? convert(double value, Unit from, Unit to) {
     if (!from.sameDimension(to)) return null;
     final base = (value + from.offset) * from.factor;
-    return base / to.factor - to.offset;
+    final out = base / to.factor - to.offset;
+    // 32 °F is 0 °C, not 5.68e-14: offset arithmetic drifts in the last bits,
+    // and that noise is what the user sees. Snap temperature results only, so
+    // a genuinely tiny length conversion is left alone.
+    if (from.offset != 0 || to.offset != 0) {
+      return double.parse(out.toStringAsFixed(10));
+    }
+    return out;
   }
 
   /// Rewrite a compound unit into the one a person would write.

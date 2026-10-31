@@ -265,6 +265,22 @@ void main() {
     expect(find.text('200%'), findsOneWidget);
   });
 
+  testWidgets('the cheat sheet tab lists what can be typed', (tester) async {
+    await boot(tester);
+    await tester.tap(find.byTooltip('Settings').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cheat sheet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ARITHMETIC'), findsOneWidget);
+    expect(find.text('100 加 20'), findsOneWidget);
+    expect(find.text('120'), findsOneWidget);
+    expect(find.text('15% of 300'), findsOneWidget);
+    expect(find.text('45'), findsOneWidget);
+    expect(find.text('PERCENTAGES'), findsOneWidget);
+  });
+
   testWidgets('the editor honours the UI scale', (tester) async {
     final c = TextEditingController(text: '1+1');
     addTearDown(c.dispose);

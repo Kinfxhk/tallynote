@@ -52,6 +52,11 @@ class Evaluator {
         if (inner is NumValue) return PercentValue(inner.value / 100);
         return const ErrorValue('bad percent');
       case UnaryNode(:final op, :final operand):
+        // A leading sign belongs to the number, not to the converted result:
+        // -40 °F is -40 °C, while negating after converting would give -4.4 °C.
+        if (op == '-' && operand is ConvertNode) {
+          return _convert(eval(UnaryNode('-', operand.value)), operand.unit);
+        }
         final v = eval(operand);
         if (v is NumValue) {
           return NumValue(op == '-' ? -v.value : v.value, v.unit);

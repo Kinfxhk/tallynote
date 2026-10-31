@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/rates.dart';
 import '../i18n/strings.dart';
+import 'cheat_sheet.dart';
 import 'feedback.dart';
 import 'formatting.dart';
 import 'theme.dart';
@@ -150,7 +151,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
         child: DefaultTabController(
-          length: 3,
+          length: 4,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -163,11 +164,17 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                   Tab(text: T.of(locale, 'appearance')),
                   Tab(text: T.of(locale, 'editor')),
                   Tab(text: T.of(locale, 'data')),
+                  Tab(text: T.of(locale, 'cheatSheet')),
                 ],
               ),
               Flexible(
                 child: TabBarView(
-                  children: [_appearance(), _editor(), _data()],
+                  children: [
+                    _appearance(),
+                    _editor(),
+                    _data(),
+                    CheatSheetView(dark: dark, locale: locale),
+                  ],
                 ),
               ),
               Align(
@@ -177,7 +184,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                   child: TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(
-                      'Done',
+                      T.of(locale, 'done'),
                       style: TextStyle(color: Palette.answer(dark)),
                     ),
                   ),

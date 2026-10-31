@@ -631,8 +631,12 @@ class SheetEngine {
       }
     }
 
-    // dates: "<date> ± <duration>"
-    final dateMath = RegExp(r'^(.*?)\s*([+-])\s*(.+)$').firstMatch(body);
+    // dates: "<date> ± <duration>". Prefer the last *spaced* operator:
+    // without it "2026-01-01 + 2 weeks" reads the dashes inside the date and
+    // answers 2,026 weeks.
+    final dateMath =
+        RegExp(r'^(.*)\s+([+-])\s+(.+)$').firstMatch(body) ??
+        RegExp(r'^(.*?)([+-])(.+)$').firstMatch(body);
     if (dateMath != null) {
       final left = dates.parse(dateMath.group(1)!);
       if (left != null) {
@@ -743,6 +747,11 @@ class SheetEngine {
         return v == null ? m.group(0)! : _literal(v);
       },
     );
+
+    // A reference to a line that has no answer must not turn into its number.
+    if (RegExp(r'\b(?:line|ln)\s+\d+\b', caseSensitive: false).hasMatch(expanded)) {
+      throw UnresolvedWord(expanded);
+    }
 
     // Soulver's "read past" behaviour: if the line starts with prose, retry
     // the expression starting at each later word boundary. "買嘢 4300 x 30%"
@@ -1051,6 +1060,11 @@ class SheetEngine {
   /// is not exactly three digits (`1,23` in US, `1.23` in EU) must not be
   /// rewritten into a different integer.
   Value? _loneNumber(String s) {
+    // A line reference that did not resolve, or `prev` on a line with nothing
+    // before it, must not fall back to quoting a number out of the line.
+    if (RegExp(r'\b(?:line|ln|prev)\b', caseSensitive: false).hasMatch(s)) {
+      return null;
+    }
     final tokens = Lexer(s, format: format).tokenize();
     // A number beside an operator is an expression we could not parse, not
     // prose to quote back: answering "rent * 12" as 12 is a wrong answer.

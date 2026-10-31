@@ -80,6 +80,11 @@ sum                          →  -520,000
 - `// any line` becomes a draft: greyed, not calculated
 - `**bold**`, `_italic_`, `~~strike~~`, `__underline__`, `{red}colour{/}` — select text and use the small format bar; markers are plain text, so the file stays portable and the maths still works
 
+**Looking things up**
+- **Settings → Cheat sheet** (計算表) lists every word you can type — the symbols, the Chinese
+  forms (`加` `減` `乘` `除`, `的`, `百分之幾`), totals, units, dates, durations — each with the
+  answer it really gives. Every row on that page is checked against the engine by a test.
+
 **Workspace**
 - Folders in the sidebar, with an unfiled group for everything else
 - Search across titles and note bodies

@@ -83,4 +83,25 @@ void main() {
     expect(one('3 kg'), '3 kg');
     expect(one('14:00'), contains('2:00 PM'));
   });
+
+  test('a reference to a line with no answer stays unanswered', () {
+    // `line 3` on a one-line sheet used to answer 3.
+    expect(one('line 3'), isNull);
+    final r = engine.evaluate(['100', '200', 'line 1 + line 2']);
+    expect(r.last.display, '300');
+  });
+
+  test('an ISO date still takes a duration', () {
+    // The dashes inside the date used to win: "2026-01-01 + 2 weeks" was 2,026 weeks.
+    expect(one('2026-01-01 + 2 weeks'), '15 January 2026');
+    expect(one('2026-01-01 - 30 days'), '2 December 2025');
+  });
+
+  test('temperature converts exactly, and a sign belongs to the number', () {
+    expect(one('32 f in c'), '0 °C');
+    expect(one('0 c in f'), '32 °F');
+    // -40 °F is -40 °C, not -(40 °F -> 4.44 °C).
+    expect(one('-40 f in c'), '-40 °C');
+    expect(one('-5 c in f'), '23 °F');
+  });
 }
