@@ -72,4 +72,15 @@ void main() {
     final r = engine.evaluate(['rent = 2500', 'rent * 12']);
     expect(r.last.display, '30,000');
   });
+
+  test('a clock time in front of a note is a label, not maths', () {
+    // Measured from a real note: "14:00 Tradeify 全帳號 1000+2000" had no answer.
+    expect(one('14:00 Tradeify 全帳號 1000+2000'), '3,000');
+    expect(one('14:00 開倉 500 x 2'), '1,000');
+    // The guards still hold: a leading number that is not a clock, and a unit
+    // after a number, behave exactly as before.
+    expect(one('4300 X 30%'), isNull);
+    expect(one('3 kg'), '3 kg');
+    expect(one('14:00'), contains('2:00 PM'));
+  });
 }

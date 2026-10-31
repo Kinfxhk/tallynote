@@ -778,7 +778,13 @@ class SheetEngine {
     }
   }
 
-  bool _isProse(String s) => !RegExp(r'[0-9+\-*/^%().$,=<>×÷]').hasMatch(s);
+  /// A leading clock time is a label, not arithmetic: "14:00 Tradeify 1000+2000"
+  /// must still answer 3,000, while "4300 X 30%" stays unanswered.
+  bool _isProse(String s) {
+    final clock = RegExp(r'^\s*\d{1,2}:\d{2}(?::\d{2})?\s*').firstMatch(s);
+    final rest = clock == null ? s : s.substring(clock.end);
+    return !RegExp(r'[0-9+\-*/^%().$,=<>×÷:]').hasMatch(rest);
+  }
 
   String _literal(Value v) {
     if (v is NumValue) {
