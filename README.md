@@ -31,9 +31,9 @@ food = 400                     →  400
 rent + food                    →  2,900
 
 # Trip to Tokyo
-flights = 4,280 #trip           →  4,280
-hotel 3 × 850 #trip             →  2,550
-total of #trip                  →  6,830
+flights = 4,280 #trip          →  4,280
+hotel 3 × 850 #trip            →  2,550
+total of #trip                 →  6,830
 
 100 USD in HKD                 →  HK$780.00
 5 kg + 3 lb                    →  6.36077711 kg
@@ -42,7 +42,7 @@ total of #trip                  →  6,830
 2026-10-30 + 2 weeks           →  13 November 2026
 3pm HKT in New York            →  30 October 2026 at 3:00 AM
 6+3x30                         →  96
-30乘3                          →  90
+30乘3                           →  90
 ```
 
 ## What it does
@@ -65,16 +65,16 @@ total of #trip                  →  6,830
 
 ```
 # Assets
-cash 500,000                 →  500,000
-stocks 300,000               →  300,000
-sum                          →  800,000
+cash 500,000                   →  500,000
+stocks 300,000                 →  300,000
+sum                            →  800,000
 
 # Liabilities
-mortgage -500,000            →  -500,000
-cards -20,000                →  -20,000
-sum                          →  -520,000
+mortgage -500,000              →  -500,000
+cards -20,000                  →  -20,000
+sum                            →  -520,000
 
-合共                          →  280,000
+合共                             →  280,000
 ```
 
 `total` / `sum` can be used inside an expression too (`total * 7.8 + 16000`), and money plus a plain number is read in that currency.
