@@ -47,7 +47,7 @@ today + 2 weeks                →  13 November 2026
 ## What it does
 
 **Calculating**
-- Line-by-line answers; a broken line never breaks the page
+- Line-by-line answers; a broken line never breaks the page. A blank line is spacing, not a section break: `total` still counts the lines above it
 - Variables (`rent = 2500`), references (`prev`, `line 3`), `sum` / `average` / `count` per section
 - Percentages in plain words: `15% of 300`, `25% off 159.99`, `20 is what % of 80`, `5% of what is 150`,
   and Chinese retail forms: `打八折 100` → 80, `八五折 200` → 170, `分帳 3 人 380` → 126.666666667

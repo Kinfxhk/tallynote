@@ -173,7 +173,8 @@ class SheetEngine {
         results.add(LineResult(text: raw));
         values.add(null);
         leafAt.add(null);
-        sectionStart = i + 1;
+        // A blank line is spacing, not a new section: people leave one before
+        // "total", and it used to make the total sum nothing at all.
         continue;
       }
       if (trimmed.startsWith('//') || _isComment(trimmed)) {

@@ -171,4 +171,29 @@ void main() {
     // the other direction picks its own divisor, so it must not guess
     expect(one(r'$30/day is what per week'), isNull);
   });
+
+  test('a blank line does not start a new section', () {
+    // From a real note: entries, one empty line, then "total".
+    final r = engine.evaluate([
+      r'Lucid Trading $1,278.51',
+      r'Tradeify $4,111.21',
+      r'Apex $3,709.10',
+      '',
+      'total',
+    ]);
+    expect(r.last.display, r'$9,098.82');
+
+    // A heading still starts one.
+    final s = engine.evaluate([
+      '# 資產',
+      '現金 500000',
+      '',
+      'sum',
+      '# 負債',
+      '貸款 -500000',
+      'sum',
+    ]);
+    expect(s[3].display, '500,000');
+    expect(s[6].display, '-500,000');
+  });
 }
