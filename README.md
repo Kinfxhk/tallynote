@@ -30,16 +30,16 @@ food = 400                     →  400
 rent + food                    →  2,900
 
 # Trip to Tokyo
-flights = 4,280                →  4,280
-hotel 3 nights × 850           →  2,550
-total of #trip                 →  6,830
+flights = 4,280 #trip           →  4,280
+hotel 3 × 850 #trip             →  2,550
+total of #trip                  →  6,830
 
 100 USD in HKD                 →  HK$780.00
 5 kg + 3 lb                    →  6.36077711 kg
 25% off 159.99 + 10% tax       →  131.99175
 9 is to 16 as 27 is to what    →  48
-today + 2 weeks                →  13 November 2026
-3pm HKT in New York            →  3:00 AM
+2026-10-30 + 2 weeks           →  13 November 2026
+3pm HKT in New York            →  30 October 2026 at 3:00 AM
 6+3x30                         →  96
 30乘3                          →  90
 ```
