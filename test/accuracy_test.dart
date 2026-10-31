@@ -141,4 +141,26 @@ void main() {
     expect(one('2026-13-01'), isNull);
     expect(one('2024-02-29'), '29 February 2024');
   });
+
+  test('scale words multiply the number, and never become a unit', () {
+    expect(one('1.5 million + 200 thousand'), '1,700,000');
+    expect(one('3 萬 + 5 千'), '35,000');
+    expect(one('2 billion'), '2,000,000,000');
+  });
+
+  test('days until and since a date are whole days', () {
+    expect(one('days until December 25'), '55 days');
+    expect(one('days since December 1'), '-31 days');
+  });
+
+  test('as percentage converts a ratio, and as fraction is refused', () {
+    expect(one('0.5 as percentage'), '50%');
+    expect(one('0.2 as fraction'), isNull);
+  });
+
+  test('in is inches only when no word follows it', () {
+    expect(one('10500 in sci'), '10,500');
+    expect(one('12 inches in feet'), '1 ft');
+    expect(one('5 in'), '5 in');
+  });
 }

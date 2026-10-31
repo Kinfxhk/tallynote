@@ -670,6 +670,50 @@ class SheetEngine {
       }
     }
 
+    // "days until December 25" / "days since December 1"
+    final cone = RegExp(
+      r'^(?:days?|日數)\s*(until|till|to|before|since|from)\s+(.+)$',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (cone != null) {
+      final target = dates.parse(cone.group(2)!);
+      // A "days until" line answers a day count or nothing: falling through
+      // would answer the bare number ("days until December 25" once said 25).
+      if (target == null) return null;
+      final dir = cone.group(1)!.toLowerCase();
+      // Whole days between two dates, not a fraction of a Tuesday afternoon.
+      final today = DateTime(dates.now.year, dates.now.month, dates.now.day);
+      final day = DateTime(target.year, target.month, target.day);
+      final diff = dir == 'since' || dir == 'from'
+          ? today.difference(day).inDays
+          : day.difference(today).inDays;
+      return NumValue(diff.toDouble(), units.lookup('day'));
+    }
+
+    // "0.5 as percentage" / "0.5 as percent"
+    final asPct = RegExp(
+      r'^(.*?)\s+as\s+(?:percentage|percent|%)$',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (asPct != null) {
+      final v = _parseValue(
+        asPct.group(1)!.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
+      if (v is NumValue && v.value >= 0 && v.value <= 1) {
+        return PercentValue(v.value);
+      }
+      return const ErrorValue('as percentage needs a value between 0 and 1');
+    }
+    // A format request we do not implement must not be answered as if the
+    // request were not there: "0.2 as fraction" once answered 0.2.
+    if (RegExp(r'\s+as\s+fraction$', caseSensitive: false).hasMatch(body)) {
+      return const ErrorValue('fractions are not supported');
+    }
+
     // dates: "<date> ± <duration>". Prefer the last *spaced* operator:
     // without it "2026-01-01 + 2 weeks" reads the dashes inside the date and
     // answers 2,026 weeks.

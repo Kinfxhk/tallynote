@@ -346,6 +346,12 @@ class Parser {
   Unit? _readUnit({bool allowDynamic = false}) {
     final c = cur;
     if (c == null || c.type != TokType.word) return null;
+    // "10500 in sci" is a conversion request, not 10,500 inches: a word after
+    // "in" makes it a preposition. "5 in" at the end of a line stays inches.
+    if (c.text.toLowerCase() == 'in') {
+      final after = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+      if (after != null && after.type == TokType.word) return null;
+    }
     final u = units.lookup(c.text);
     if (u != null) {
       _p++;
@@ -365,6 +371,17 @@ class Parser {
     }
     return null;
   }
+
+  /// Words that multiply the number in front of them.
+  static double? _scaleFactor(String w) => switch (w) {
+    'thousand' || '千' => 1e3,
+    'million' || '百萬' || '百万' => 1e6,
+    'billion' || '十億' || '十亿' => 1e9,
+    'trillion' => 1e12,
+    '萬' || '万' => 1e4,
+    '億' || '亿' => 1e8,
+    _ => null,
+  };
 
   static const _reserved = {
     'in',
@@ -460,6 +477,16 @@ class Parser {
     if (c.type == TokType.number) {
       _p++;
       var value = c.num!;
+      // "1.5 million", "200 thousand", "3 萬": a word that scales the number,
+      // and must be read before the unit grab turns it into one.
+      final scaleWord = cur;
+      if (scaleWord != null && scaleWord.type == TokType.word) {
+        final factor = _scaleFactor(scaleWord.text.toLowerCase());
+        if (factor != null) {
+          _p++;
+          value *= factor;
+        }
+      }
       // "10 mod 3": the word after the number is an operator, not a unit.
       final peek = cur;
       final isMod =
