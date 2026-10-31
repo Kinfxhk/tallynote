@@ -76,6 +76,8 @@ sum                          →  -520,000
 合共                          →  280,000
 ```
 
+`total` / `sum` can be used inside an expression too (`total * 7.8 + 16000`), and money plus a plain number is read in that currency.
+
 `grand total` / `合共` / `總共` adds every individual line above it — never the subtotals — and groups by unit when dimensions differ. Lines labelled *Total* / *Net* / *合計* are treated as summaries, so nothing is counted twice.
 
 **Reading real-world notes**

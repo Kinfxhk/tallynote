@@ -414,6 +414,26 @@ class SheetEngine {
       return _aggregate('sum', items);
     }
 
+    // "total * 7.8 + 16000": an aggregate word standing beside an operator is
+    // the section total, not a variable that happens to be undefined. A word
+    // followed by "of #tag", by a colon or by prose is left alone.
+    body = body.replaceAllMapped(
+      RegExp(
+        r'(^|[+\-*/^%×÷\s(])(total|subtotal|sum)(?=\s*[+\-*/^%×÷])',
+        caseSensitive: false,
+      ),
+      (m) {
+        final word = m.group(2)!.toLowerCase();
+        if (vars.containsKey(word)) return m.group(0)!;
+        final v = _aggregate(
+          'sum',
+          leafAt.sublist(sectionStart, current).whereType<Value>().toList(),
+        );
+        if (v is ErrorValue) return m.group(0)!;
+        return '${m.group(1)}${_literal(v)}';
+      },
+    );
+
     // rule of three: "9 is to 16 as 27 is to what"
     final r3 = RegExp(
       r'^(.*?)\s+is\s+to\s+(.*?)\s+as\s+(.*?)\s+is\s+to\s+(what|\?|.*)$',

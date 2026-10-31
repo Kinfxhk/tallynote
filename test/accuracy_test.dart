@@ -196,4 +196,26 @@ void main() {
     expect(s[3].display, '500,000');
     expect(s[6].display, '-500,000');
   });
+
+  test('an aggregate word inside an expression is the section total', () {
+    final r = engine.evaluate([
+      r'Lucid Trading $1,278.51',
+      r'Tradeify $4,111.21',
+      r'Apex $3,709.10',
+      '',
+      'total',
+      'total * 7.8 + 16000',
+    ]);
+    expect(r[4].display, r'$9,098.82');
+    expect(r[5].display, r'$86,970.80');
+
+    // A user-defined variable of the same name still wins.
+    final v = engine.evaluate(['total = 300', 'total * 2']);
+    expect(v.last.display, '600');
+  });
+
+  test('money plus a plain number is read in that currency', () {
+    expect(one(r'$100 + 5'), r'$105.00');
+    expect(one(r'$100 + 5 kg'), isNull);
+  });
 }

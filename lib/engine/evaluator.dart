@@ -218,6 +218,15 @@ class Evaluator {
       return MoneyValue(l.value + sign * rr.value, l.currency);
     }
 
+    // "total * 7.8 + 16000": a plain number beside money is read in that
+    // currency. A number with a unit is still an error ($100 + 5 kg).
+    if (l is MoneyValue && r is NumValue && r.unit == null) {
+      return MoneyValue(l.value + sign * r.value, l.currency);
+    }
+    if (l is NumValue && l.unit == null && r is MoneyValue && sign > 0) {
+      return MoneyValue(l.value + r.value, r.currency);
+    }
+
     // dates
     if (l is DateValue) {
       final d = _asDuration(r);
