@@ -19,6 +19,7 @@ Support: **[Buy Me a Coffee](https://buymeacoffee.com/kinfxhk)**
 | Windows (portable) | `tallynote-windows.zip` | unzip and run `tallynote.exe` |
 | Linux | `tallynote_<version>_amd64.deb` | installs to `/usr/lib/tallynote` with a desktop entry |
 | Linux (portable) | `tallynote-linux.tar.gz` | unpack and run `bundle/tallynote` |
+| Linux (arm64) | `tallynote_<version>_arm64.deb` · `tallynote-linux-arm64.tar.gz` | same builds for ARM machines and Apple-silicon Linux VMs |
 | Web | [kinfxhk.github.io/tallynote](https://kinfxhk.github.io/tallynote/) | deployed from `main` |
 | macOS / iOS | not yet | needs a full Xcode install |
 
