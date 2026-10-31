@@ -258,6 +258,13 @@ class Parser {
             ['除'],
           ])) {
         left = BinNode('/', left, _unary());
+      } else if ((_isOp('%') && _numberFollows()) ||
+          _matchAnyWords(const [['mod'], ['modulo']]) ||
+          _matchWords(const ['餘'])) {
+        // "7 % 2" / "10 mod 3": a percent sign with a number after it is a
+        // remainder, not a percentage. "200 + 10%" has nothing after it.
+        if (_isOp('%')) _p++;
+        left = BinNode('%', left, _unary());
       } else if (cur?.type == TokType.lparen) {
         left = BinNode('*', left, _unary()); // implicit: 2(3+4)
       } else {
@@ -286,6 +293,8 @@ class Parser {
       if (c == null) break;
       if (c.type == TokType.word) {
         final w = c.text.toLowerCase();
+        // "10 mod 3" belongs to the multiplicative level, not to a unit name.
+        if (w == 'mod' || w == 'modulo' || w == '餘') break;
         // conversion: "in" / "to" / "as" followed by a unit
         if (w == 'in' || w == 'to' || w == 'as' || w == 'into') {
           final save = _p;
@@ -451,8 +460,14 @@ class Parser {
     if (c.type == TokType.number) {
       _p++;
       var value = c.num!;
+      // "10 mod 3": the word after the number is an operator, not a unit.
+      final peek = cur;
+      final isMod =
+          peek != null &&
+          peek.type == TokType.word &&
+          const {'mod', 'modulo', '餘'}.contains(peek.text.toLowerCase());
       // currency word before number: "USD 100"
-      var unit = _readUnit(allowDynamic: true);
+      var unit = isMod ? null : _readUnit(allowDynamic: true);
       if (unit == null) {
         final next = cur;
         if (next != null && next.type == TokType.word) {
@@ -517,11 +532,21 @@ class Parser {
   }
 
   Node _percentSuffix(Node node) {
-    if (_isOp('%')) {
+    if (_isOp('%') && !_numberFollows()) {
       _p++;
       return PercentNode(node);
     }
     return node;
+  }
+
+  /// True when the token after the cursor opens an operand, which is how
+  /// `%` distinguishes a remainder (`7 % 2`) from a percentage (`200 + 10%`).
+  bool _numberFollows() {
+    final n = _p + 1 < tokens.length ? tokens[_p + 1] : null;
+    return n != null &&
+        (n.type == TokType.number ||
+            n.type == TokType.lparen ||
+            (n.type == TokType.op && (n.text == '-' || n.text == '+')));
   }
 
   /// `5%` or `百分之5` standing where a percent amount is required.

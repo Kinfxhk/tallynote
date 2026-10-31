@@ -34,6 +34,8 @@ const cheatSheet = <CheatGroup>[
     CheatRow('30乘3', '90'),
     CheatRow('100除以4', '25'),
     CheatRow('4300 x 30%', '1,290'),
+    CheatRow('7 % 2', '1'),
+    CheatRow('10 mod 3', '1'),
   ]),
   CheatGroup('cheatPercent', [
     CheatRow('15% of 300', '45'),
@@ -44,6 +46,8 @@ const cheatSheet = <CheatGroup>[
     CheatRow('20 is what % of 80', '25%'),
     CheatRow('5% of what is 150', '3,000'),
     CheatRow('20是80的百分之幾', '25%'),
+    CheatRow('打八折 100', '80'),
+    CheatRow('100 打八折', '80'),
   ]),
   CheatGroup('cheatTotals', [
     CheatRow('sum'),
@@ -83,6 +87,7 @@ const cheatSheet = <CheatGroup>[
     CheatRow('// 註釋', null),
     CheatRow('# 標題', null),
     CheatRow('lunch 120 #food', '120'),
+    CheatRow('分帳 3 人 380', '126.666666667'),
   ]),
 ];
 

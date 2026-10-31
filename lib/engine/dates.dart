@@ -165,10 +165,14 @@ class DateParser {
       r'^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$',
     ).firstMatch(s);
     if (iso != null) {
+      final y = int.parse(iso.group(1)!);
+      final m = int.parse(iso.group(2)!);
+      final d = int.parse(iso.group(3)!);
+      if (!_isRealDate(y, m, d)) return null;
       return DateTime(
-        int.parse(iso.group(1)!),
-        int.parse(iso.group(2)!),
-        int.parse(iso.group(3)!),
+        y,
+        m,
+        d,
         iso.group(4) == null ? 0 : int.parse(iso.group(4)!),
         iso.group(5) == null ? 0 : int.parse(iso.group(5)!),
       );
@@ -185,7 +189,9 @@ class DateParser {
         .firstMatch(lower);
     if (m1 != null && _months.containsKey(m1.group(1)!)) {
       final year = m1.group(3) == null ? base.year : int.parse(m1.group(3)!);
-      var d = DateTime(year, _months[m1.group(1)!]!, int.parse(m1.group(2)!));
+      final day = int.parse(m1.group(2)!);
+      if (!_isRealDate(year, _months[m1.group(1)!]!, day)) return null;
+      var d = DateTime(year, _months[m1.group(1)!]!, day);
       // a bare "March 12" in the past means next year
       if (m1.group(3) == null && d.isBefore(_dateOnly(base))) {
         d = DateTime(year + 1, d.month, d.day);
@@ -196,7 +202,9 @@ class DateParser {
         .firstMatch(lower);
     if (m2 != null && _months.containsKey(m2.group(2)!)) {
       final year = m2.group(3) == null ? base.year : int.parse(m2.group(3)!);
-      var d = DateTime(year, _months[m2.group(2)!]!, int.parse(m2.group(1)!));
+      final day = int.parse(m2.group(1)!);
+      if (!_isRealDate(year, _months[m2.group(2)!]!, day)) return null;
+      var d = DateTime(year, _months[m2.group(2)!]!, day);
       if (m2.group(3) == null && d.isBefore(_dateOnly(base))) {
         d = DateTime(year + 1, d.month, d.day);
       }
@@ -259,6 +267,14 @@ class DateParser {
           };
     }
     return Duration(milliseconds: (total * 1000).round());
+  }
+
+  /// DateTime silently rolls 2026-02-30 into 2 March. A date that does not
+  /// exist is not a date: refuse it rather than answer a different day.
+  static bool _isRealDate(int y, int m, int d) {
+    if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+    final t = DateTime(y, m, d);
+    return t.year == y && t.month == m && t.day == d;
   }
 
   DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);

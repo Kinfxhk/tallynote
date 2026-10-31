@@ -115,6 +115,14 @@ class Evaluator {
       return const ErrorValue('incompatible values');
     }
 
+    if (op == '%') {
+      if (l is NumValue && r is NumValue) {
+        if (r.value == 0) return const ErrorValue('divide by zero');
+        return NumValue(l.value % r.value, l.unit);
+      }
+      return const ErrorValue('bad remainder');
+    }
+
     if (op == '^') {
       if (l is NumValue && r is NumValue) {
         return NumValue(math.pow(l.value, r.value).toDouble());

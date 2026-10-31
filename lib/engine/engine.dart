@@ -345,6 +345,7 @@ class SheetEngine {
       vars: vars,
       rates: rates,
       labels: labels,
+      prev: values.isEmpty ? null : values.last,
     );
 
     // "Topstep: −$10,408.52" — a label in front of the value
@@ -482,6 +483,44 @@ class SheetEngine {
         );
       }
     }
+
+    // Splitting a bill: 分帳 3 人 380 / 380 分 3 人. Cantonese notes write it
+    // either way round; both mean one share.
+    final split = RegExp(
+      r'^(?:分帳|夾錢|攤分|split)\s*(\d{1,3})\s*人\s*(.+)$',
+    ).firstMatch(body);
+    final splitTail = split == null
+        ? RegExp(r'^(.+?)\s*(?:分|除)\s*(\d{1,3})\s*(?:人|份)$').firstMatch(body)
+        : null;
+    if (split != null || splitTail != null) {
+      final people = int.parse(
+        (split ?? splitTail)!.group(split != null ? 1 : 2)!,
+      );
+      final amountText = (split ?? splitTail)!.group(split != null ? 2 : 1)!;
+      final amount = _parseValue(
+        amountText.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
+      if (people > 0) {
+        if (amount is MoneyValue) {
+          return MoneyValue(amount.value / people, amount.currency);
+        }
+        if (amount is NumValue) return NumValue(amount.value / people, amount.unit);
+      }
+      return null;
+    }
+
+    final discount = _zhDiscount(
+      body,
+      ctx,
+      values: values,
+      sectionStart: sectionStart,
+      current: current,
+    );
+    if (discount != null) return discount;
 
     final zhPct = _zhPercent(
       body,
@@ -704,6 +743,10 @@ class SheetEngine {
       );
     }
 
+    // A body that starts with a date-shaped number is a date, not arithmetic:
+    // "2026-02-30" must not answer 1,994 because February has no 30th.
+    if (RegExp(r'^\d{4}-\d{1,2}-\d{1,2}\b').hasMatch(body)) return null;
+
     // "2h 30m", "3 hours 20 minutes", "1h 2m 3s" — a duration, not a product
     // of a number and a unit.
     final span = _durationLine(body);
@@ -806,6 +849,77 @@ class SheetEngine {
   }
 
   double? _numOf(Value? v) => v is NumValue ? v.value : null;
+
+
+  /// Chinese retail discounts: 八折 pays 80% of the price, 八五折 pays 85%,
+  /// 九五折 pays 95%. `打八折 100` and `100 打八折` both answer 80.
+  ///
+  /// A bare number before 折 is read the Chinese way (8折 = 80%), while 95折
+  /// keeps its 95. Nothing else is guessed: no amount, no answer.
+  Value? _zhDiscount(
+    String body,
+    EvalContext ctx, {
+    required List<Value?> values,
+    required int sectionStart,
+    required int current,
+  }) {
+    const digits = {
+      '一': 1.0,
+      '二': 2.0,
+      '三': 3.0,
+      '四': 4.0,
+      '五': 5.0,
+      '六': 6.0,
+      '七': 7.0,
+      '八': 8.0,
+      '九': 9.0,
+    };
+    double? percentOf(String raw) {
+      final t = raw.trim();
+      final ascii = double.tryParse(t);
+      if (ascii != null) return ascii >= 10 ? ascii : ascii * 10;
+      if (t.length == 1) {
+        final d = digits[t];
+        return d == null ? null : d * 10;
+      }
+      if (t.length == 2) {
+        final a = digits[t[0]];
+        final b = digits[t[1]];
+        if (a == null || b == null) return null;
+        return a * 10 + b;
+      }
+      return null;
+    }
+
+    Value? apply(String amountText, String numeral) {
+      final pct = percentOf(numeral);
+      if (pct == null) return null;
+      final amount = _parseValue(
+        amountText.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
+      final f = pct / 100;
+      if (amount is NumValue) return NumValue(amount.value * f, amount.unit);
+      if (amount is MoneyValue) return MoneyValue(amount.value * f, amount.currency);
+      return null;
+    }
+
+    const numeral = r'([0-9]+(?:\.[0-9]+)?|[一二三四五六七八九]{1,2})';
+    final prefix = RegExp('^(?:打)?\\s*$numeral\\s*折\\s*(?:價|錢)?\\s*(.+)\$')
+        .firstMatch(body);
+    if (prefix != null) {
+      return apply(prefix.group(2)!, prefix.group(1)!);
+    }
+    final suffix = RegExp('^(.+?)\\s*(?:打)?\\s*$numeral\\s*折\$')
+        .firstMatch(body);
+    if (suffix != null) {
+      return apply(suffix.group(1)!, suffix.group(2)!);
+    }
+    return null;
+  }
 
   /// Chinese forms of the two Core percent questions.
   ///

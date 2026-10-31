@@ -104,4 +104,41 @@ void main() {
     expect(one('-40 f in c'), '-40 °C');
     expect(one('-5 c in f'), '23 °F');
   });
+
+  test('a percent sign with a number after it is a remainder', () {
+    expect(one('7 % 2'), '1');
+    expect(one('10 mod 3'), '1');
+    expect(one('100 % 30'), '10');
+    // and the percentage forms are untouched
+    expect(one('200 + 10%'), '220');
+    expect(one('15% of 300'), '45');
+    expect(one('25% off 159.99'), '119.9925');
+  });
+
+  test('a Chinese discount pays that share of the price', () {
+    expect(one('打八折 100'), '80');
+    expect(one('八折 100'), '80');
+    expect(one('100 打八折'), '80');
+    expect(one('八五折 200'), '170');
+    expect(one('九五折 100'), '95');
+    expect(one(r'打七折 $200'), r'$140.00');
+  });
+
+  test('splitting a bill', () {
+    expect(one('分帳 3 人 380'), '126.666666667');
+    expect(one('380 分 3 人'), '126.666666667');
+    expect(one(r'$300 分 2 人'), r'$150.00');
+  });
+
+  test('prev is the line above', () {
+    final r = engine.evaluate(['rent = 2500', 'food = 400', 'rent + food', 'prev / 2']);
+    expect(r.last.display, '1,450');
+  });
+
+  test('a date that does not exist is not arithmetic', () {
+    expect(one('2026-02-30'), isNull);
+    expect(one('2026-02-29'), isNull); // 2026 is not a leap year
+    expect(one('2026-13-01'), isNull);
+    expect(one('2024-02-29'), '29 February 2024');
+  });
 }
