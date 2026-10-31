@@ -95,6 +95,8 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter build windows --release
+      - name: Ship the VC++ runtime next to the exe
+        run: pwsh packaging/windows/ship-vcrt.ps1
       - run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath tallynote-windows.zip
       - name: Build installer
         run: |
