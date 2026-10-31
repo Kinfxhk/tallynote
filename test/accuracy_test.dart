@@ -163,4 +163,12 @@ void main() {
     expect(one('12 inches in feet'), '1 ft');
     expect(one('5 in'), '5 in');
   });
+
+  test('a rate is annualised, or refused', () {
+    expect(one(r'$30/day is what per year'), r'$10,950.00');
+    expect(one(r'$250/week is what per year'), r'$13,000.00');
+    expect(one(r'$3000/month is what per year'), r'$36,000.00');
+    // the other direction picks its own divisor, so it must not guess
+    expect(one(r'$30/day is what per week'), isNull);
+  });
 }

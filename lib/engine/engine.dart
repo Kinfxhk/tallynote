@@ -670,6 +670,39 @@ class SheetEngine {
       }
     }
 
+    // "$30/day is what per year" — annualise a daily, weekly or monthly rate.
+    // The other direction (year -> day) picks its own divisor, so it is refused
+    // rather than guessed.
+    final perWhat = RegExp(
+      r'^(.*?)\s*/\s*(?:per\s+)?(day|week|month)\s+is\s+what\s+per\s+(year)$',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (perWhat != null) {
+      final amount = _parseValue(
+        perWhat.group(1)!.trim(),
+        ctx,
+        values: values,
+        sectionStart: sectionStart,
+        current: current,
+      );
+      final factor = switch (perWhat.group(2)!.toLowerCase()) {
+        'day' => 365.0,
+        'week' => 52.0,
+        _ => 12.0,
+      };
+      if (amount is MoneyValue) {
+        return MoneyValue(amount.value * factor, amount.currency);
+      }
+      if (amount is NumValue) return NumValue(amount.value * factor, amount.unit);
+      return const ErrorValue('rate conversion needs an amount');
+    }
+    // Any other "per X is what per Y" is not supported: answering the number
+    // in front of the rate would be a wrong answer ("$30/day" -> $30.00).
+    if (RegExp(r'\bis\s+what\s+per\s+(day|week|month|year)\b', caseSensitive: false)
+        .hasMatch(body)) {
+      return const ErrorValue('rate conversion is not supported');
+    }
+
     // "days until December 25" / "days since December 1"
     final cone = RegExp(
       r'^(?:days?|日數)\s*(until|till|to|before|since|from)\s+(.+)$',

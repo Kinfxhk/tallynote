@@ -52,6 +52,7 @@ today + 2 weeks                →  13 November 2026
 - Percentages in plain words: `15% of 300`, `25% off 159.99`, `20 is what % of 80`, `5% of what is 150`,
   and Chinese retail forms: `打八折 100` → 80, `八五折 200` → 170, `分帳 3 人 380` → 126.666666667
 - Remainders: `7 % 2` or `10 mod 3` → 1 (a `%` with a number after it is never a percentage)
+- Scale words: `1.5 million + 200 thousand` → 1,700,000; rates annualise: `$30/day is what per year` → $10,950.00
 - Units (length, mass, area, volume, speed, time, data, angle, temperature); mixed units convert on the fly
 - Currency with daily ECB rates, cached for offline use
 - Dates, durations and time zones: `today + 3 workdays`, `30 days from today`, `2026-10-31 - 2026-01-01` → 303 days, `3pm HKT in New York`
