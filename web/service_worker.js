@@ -4,7 +4,7 @@
 // Navigation is network-first so a new deploy shows immediately; everything
 // else is stale-while-revalidate so the second open is instant and the app
 // still starts with the network unplugged.
-const CACHE = 'tallynote-v2';
+const CACHE = 'tallynote-v3';
 
 // Best effort: one missing file must not fail the whole install.
 const PRECACHE = [
@@ -63,7 +63,16 @@ self.addEventListener('fetch', (event) => {
   // Exchange rates are the one thing that may leave the app; never cache them.
   if (url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  // The app itself is network-first: a fix must be live on the next open, not
+  // the one after. Everything else stays stale-while-revalidate.
+  const path = url.pathname;
+  const isApp =
+    request.mode === 'navigate' ||
+    path.endsWith('/main.dart.js') ||
+    path.endsWith('/flutter_bootstrap.js') ||
+    path.endsWith('/version.json');
+
+  if (isApp) {
     event.respondWith(
       (async () => {
         try {
@@ -73,8 +82,12 @@ self.addEventListener('fetch', (event) => {
         } catch (_) {
           const hit = await caches.match(request);
           if (hit) return hit;
-          const shell = await caches.match('./index.html');
-          if (shell) return shell;
+          // Only a navigation may fall back to the shell document; a missing
+          // script must fail as itself.
+          if (request.mode === 'navigate') {
+            const shell = await caches.match('./index.html');
+            if (shell) return shell;
+          }
           throw _;
         }
       })()
